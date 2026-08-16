@@ -1,0 +1,88 @@
+@page {
+  size: A4;
+  margin: 14mm 16mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000;
+  }
+
+  #app {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block !important;
+  }
+
+  .print-doc {
+    font: 12pt/1.35 "Times New Roman", Times, serif;
+    color: #000;
+  }
+
+  .print-doc h1 {
+    text-align: center;
+    font-size: 16pt;
+    margin: 0 0 4pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .print-doc .sub {
+    text-align: center;
+    margin: 0 0 6pt;
+    font-size: 12pt;
+  }
+
+  .print-doc .src {
+    text-align: center;
+    font-size: 9pt;
+    margin: 0 0 14pt;
+  }
+
+  .print-doc h2 {
+    font-size: 13pt;
+    margin: 12pt 0 6pt;
+    page-break-after: avoid;
+  }
+
+  .print-line {
+    margin: 0 0 5pt;
+  }
+
+  .u {
+    border-bottom: 1px solid #000;
+    min-height: 14pt;
+    display: inline-block;
+    min-width: 4em;
+    padding: 0 2pt;
+  }
+
+  table.print {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 8pt;
+    page-break-inside: avoid;
+    font-size: 11pt;
+  }
+
+  table.print th,
+  table.print td {
+    border: 1px solid #000;
+    padding: 3pt 4pt;
+    vertical-align: top;
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16pt;
+  }
+
+  .keep {
+    page-break-inside: avoid;
+  }
+}

@@ -1,0 +1,5 @@
+_source/
+dist/
+.netlify/
+.cursor/
+netlify.toml
