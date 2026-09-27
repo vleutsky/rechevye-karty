@@ -771,9 +771,9 @@
     });
     html +=
       "<h3>Различение слов, близких по звучанию</h3>" +
-      pairTable(WORD_PAIRS, "pair", map, "Пара слов") +
+      pairTable(WORD_PAIRS, "pair", map, "Пара слов", "N") +
       "<h3>Звуковые дорожки</h3>" +
-      pairTable(SOUND_TRACKS, "track", map, "Ряд");
+      pairTable(SOUND_TRACKS, "track", map, "Ряд", "N");
     if (tpl.phonemIdea) {
       html += "<div class='fields'>" + field(tpl.phonemIdea, "idea", { value: ans(map, "idea") }) + "</div>";
     }
