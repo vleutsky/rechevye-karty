@@ -55,6 +55,7 @@
     } catch (err) {
       saveFailed = true;
     }
+    fileWrite();
     showSaveError();
     const el = document.getElementById("save-state");
     if (el) el.textContent = saveLabel(label);
@@ -62,11 +63,13 @@
   }
 
   function saveLabel(label) {
-    return saveFailed ? "Не сохранено" : label || "Сохранено";
+    if (saveFailed) return "Не сохранено";
+    if (fileState === "error") return "Не записано в файл базы";
+    return label || "Сохранено";
   }
 
   function saveStateClass() {
-    return saveFailed ? "save-state is-error" : "save-state";
+    return saveFailed || fileState === "error" ? "save-state is-error" : "save-state";
   }
 
   function showSaveError() {
@@ -144,6 +147,223 @@
       '<button class="btn btn-ghost" data-action="snooze-backup">Позже</button>' +
       "</div></div>"
     );
+  }
+
+  // ---- Файл базы на компьютере (File System Access API, Chrome / Edge) ----
+  const FILE_OK = typeof window.showOpenFilePicker === "function" && typeof indexedDB !== "undefined";
+  const FILE_TYPES = [{ description: "База речевых карт", accept: { "application/json": [".json"] } }];
+  let fileHandle = null;
+  let fileState = "none"; // none | need-permission | on | error
+  let fileMenu = false;
+  let fileQueue = Promise.resolve();
+
+  function idb(mode, fn) {
+    return new Promise(function (resolve, reject) {
+      const req = indexedDB.open("logoped-karty-file", 1);
+      req.onupgradeneeded = function () {
+        req.result.createObjectStore("h");
+      };
+      req.onerror = function () {
+        reject(req.error);
+      };
+      req.onsuccess = function () {
+        const tx = req.result.transaction("h", mode);
+        const r = fn(tx.objectStore("h"));
+        tx.oncomplete = function () {
+          resolve(r && r.result);
+        };
+        tx.onerror = function () {
+          reject(tx.error);
+        };
+      };
+    });
+  }
+
+  function saveHandle(h) {
+    return idb("readwrite", function (st) {
+      return h ? st.put(h, "db") : st.delete("db");
+    }).catch(function () {});
+  }
+
+  function fileJson() {
+    return JSON.stringify(db, null, 2);
+  }
+
+  function fileWrite() {
+    if (!fileHandle || fileState !== "on") return fileQueue;
+    fileQueue = fileQueue
+      .then(function () {
+        return fileHandle.createWritable();
+      })
+      .then(function (w) {
+        return w.write(fileJson()).then(function () {
+          return w.close();
+        });
+      })
+      .then(function () {
+        markBackup();
+      })
+      .catch(function () {
+        fileState = "error";
+        fileRefresh();
+      });
+    return fileQueue;
+  }
+
+  function fileRead(h) {
+    return h.getFile().then(function (f) {
+      return f.text();
+    }).then(function (text) {
+      if (!text.trim()) return null;
+      const data = JSON.parse(text);
+      if (!data || !Array.isArray(data.children)) throw new Error("not a base");
+      return data;
+    });
+  }
+
+  // Подключить дескриптор: взять более свежие данные (файл или браузер), записать в файл.
+  function fileAttach(h, askReplace) {
+    return fileRead(h).then(function (data) {
+      fileHandle = h;
+      fileState = "on";
+      fileMenu = false;
+      saveHandle(h);
+      if (data && (data.savedAt || 0) >= (db.savedAt || 0)) {
+        if (askReplace && db.children.length && !confirm(
+          "Загрузить картотеку из файла «" + h.name + "»? Данные в браузере будут заменены данными файла."
+        )) {
+          fileHandle = null;
+          fileState = "none";
+          saveHandle(null);
+          fileRefresh();
+          return;
+        }
+        db = data;
+        db.children = db.children || [];
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        } catch (err) {}
+        markBackup();
+        render();
+        return;
+      }
+      if (!db.savedAt) db.savedAt = Date.now();
+      return fileWrite().then(render);
+    });
+  }
+
+  function fileFail(err) {
+    if (err && err.name === "AbortError") return;
+    alert("Не получилось открыть файл базы. Выберите JSON-файл, сохранённый этим сайтом.");
+  }
+
+  function fileOpen() {
+    window.showOpenFilePicker({ types: FILE_TYPES, multiple: false })
+      .then(function (list) {
+        return list[0].requestPermission({ mode: "readwrite" }).then(function (p) {
+          if (p !== "granted") throw new Error("denied");
+          return fileAttach(list[0], true);
+        });
+      })
+      .catch(fileFail);
+  }
+
+  function fileCreate() {
+    window.showSaveFilePicker({ suggestedName: "rechevye-karty-baza.json", types: FILE_TYPES })
+      .then(function (h) {
+        fileHandle = h;
+        fileState = "on";
+        fileMenu = false;
+        saveHandle(h);
+        if (!db.savedAt) db.savedAt = Date.now();
+        return fileWrite().then(render);
+      })
+      .catch(fileFail);
+  }
+
+  function fileReconnect() {
+    if (!fileHandle) return;
+    fileHandle.requestPermission({ mode: "readwrite" })
+      .then(function (p) {
+        if (p !== "granted") return;
+        return fileAttach(fileHandle, false);
+      })
+      .catch(function () {
+        fileState = "error";
+        fileRefresh();
+      });
+  }
+
+  function fileDisconnect() {
+    if (!confirm("Отключить файл базы «" + fileHandle.name + "»? Файл останется на компьютере, данные — в браузере.")) return;
+    fileHandle = null;
+    fileState = "none";
+    saveHandle(null);
+    render();
+  }
+
+  function fileInit() {
+    if (!FILE_OK) return;
+    idb("readonly", function (st) {
+      return st.get("db");
+    })
+      .then(function (h) {
+        if (!h) return;
+        fileHandle = h;
+        return h.queryPermission({ mode: "readwrite" }).then(function (p) {
+          if (p === "granted") return fileAttach(h, false);
+          fileState = "need-permission";
+          render();
+        });
+      })
+      .catch(function () {
+        if (fileHandle) {
+          fileState = "error";
+          render();
+        }
+      });
+  }
+
+  function fileButton() {
+    if (!FILE_OK) return '<button class="btn" data-action="file-db">Файл базы</button>';
+    if (fileState === "on") {
+      return '<button class="btn btn-file is-on" data-action="file-db" title="Все изменения пишутся в этот файл">База: ' +
+        esc(fileHandle.name) + "</button>";
+    }
+    if (fileState === "error" || fileState === "need-permission") {
+      return '<button class="btn btn-file is-warn" data-action="file-reconnect">Подключить базу</button>';
+    }
+    return '<button class="btn" data-action="file-db">Файл базы</button>';
+  }
+
+  function fileNotice() {
+    if (fileState === "need-permission" || fileState === "error") {
+      return (
+        '<div class="backup-note" role="status"><span>' +
+        (fileState === "error"
+          ? "Файл базы «" + esc(fileHandle.name) + "» недоступен: изменения сохраняются только в браузере."
+          : "Файл базы «" + esc(fileHandle.name) + "» ждёт разрешения браузера.") +
+        '</span><div class="row"><button class="btn btn-primary" data-action="file-reconnect">Подключить снова</button>' +
+        '<button class="btn btn-ghost" data-action="file-open">Выбрать другой файл</button></div></div>'
+      );
+    }
+    if (!fileMenu) return "";
+    return (
+      '<div class="backup-note file-note" role="status"><span>Файл базы хранит картотеку на компьютере. ' +
+      "Все изменения сразу записываются в него, открыть его можно в любой момент.</span>" +
+      '<div class="row"><button class="btn btn-primary" data-action="file-create">Создать новый файл</button>' +
+      '<button class="btn" data-action="file-open">Открыть существующий</button>' +
+      '<button class="btn btn-ghost" data-action="file-menu-close">Отмена</button></div></div>'
+    );
+  }
+
+  function fileRefresh() {
+    const el = document.getElementById("save-state");
+    if (el) {
+      el.textContent = saveLabel();
+      el.className = saveStateClass();
+    }
+    render();
   }
 
   function route() {
@@ -245,11 +465,13 @@
       "</h1><span>Крупенчук, 4 / 5 / 6 лет</span></div>" +
       '<div class="top-actions">' +
       (extra || "") +
+      fileButton() +
       '<button class="btn" data-action="export">Копия</button>' +
       '<button class="btn" data-action="import">Загрузить копию</button>' +
       '<input class="hidden-file" id="import-file" type="file" accept="application/json">' +
       "</div></header>" +
-      backupNotice()
+      fileNotice() +
+      (fileState === "on" ? "" : backupNotice())
     );
   }
 
@@ -1592,6 +1814,23 @@
       if (note) note.remove();
     }
     if (action === "import") document.getElementById("import-file").click();
+    if (action === "file-db") {
+      if (!FILE_OK) {
+        alert("Файл базы работает в Chrome или Edge на компьютере. В этом браузере сохраняйте данные кнопкой «Копия».");
+      } else if (fileState === "on") {
+        fileDisconnect();
+      } else {
+        fileMenu = !fileMenu;
+        render();
+      }
+    }
+    if (action === "file-create") fileCreate();
+    if (action === "file-open") fileOpen();
+    if (action === "file-reconnect") fileReconnect();
+    if (action === "file-menu-close") {
+      fileMenu = false;
+      render();
+    }
     if (action === "fill-vowels" && ctx.map) {
       VOWELS.forEach(function (v) {
         if (!ctx.map.answers["vow:" + v]) ctx.map.answers["vow:" + v] = "N";
@@ -1658,10 +1897,17 @@
   });
 
   window.addEventListener("hashchange", render);
+  window.addEventListener("beforeunload", function () {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      persist();
+    }
+  });
   window.addEventListener("beforeprint", function () {
     const ctx = current();
     if (ctx.child && ctx.map) printRoot.innerHTML = printHtml(ctx.child, ctx.map);
   });
 
   render();
+  fileInit();
 })();

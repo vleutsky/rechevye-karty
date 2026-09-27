@@ -568,3 +568,19 @@ table.data input.selected {
 .mark .chips {
   flex-wrap: nowrap;
 }
+
+.btn-file.is-on {
+  border-color: var(--pine);
+  color: var(--pine-2);
+}
+
+.btn-file.is-warn {
+  border-color: var(--clay);
+  color: var(--clay-2);
+}
+
+.file-note {
+  background: #eef5ee;
+  border-color: #cfe0d1;
+  color: var(--pine-2);
+}
