@@ -1018,6 +1018,7 @@
         '<button class="btn" data-action="open-child" data-id="' +
           child.id +
           '">К ребёнку</button>' +
+          '<button class="btn btn-primary" data-action="save-draft">Сохранить черновик</button>' +
           '<button class="btn btn-clay" data-action="print">Печать</button>'
       ) +
       '<div class="editor"><aside class="side">' +
@@ -1524,6 +1525,11 @@
       });
       persist();
       render();
+    }
+    if (action === "save-draft") {
+      clearTimeout(saveTimer);
+      const t = new Date();
+      persist("Черновик сохранён " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"));
     }
     if (action === "print") {
       if (ctx.child && ctx.map) printRoot.innerHTML = printHtml(ctx.child, ctx.map);
