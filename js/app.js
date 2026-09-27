@@ -7,6 +7,7 @@
   let section = sessionStorage.getItem("karta-section") || "anketa";
   let scorePeriod = "start";
   let saveTimer = null;
+  let saveFailed = false;
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -47,9 +48,43 @@
 
   function persist(label) {
     db.savedAt = Date.now();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      saveFailed = false;
+    } catch (err) {
+      saveFailed = true;
+    }
+    showSaveError();
     const el = document.getElementById("save-state");
-    if (el) el.textContent = label || "Сохранено";
+    if (el) el.textContent = saveLabel(label);
+    return !saveFailed;
+  }
+
+  function saveLabel(label) {
+    return saveFailed ? "Не сохранено" : label || "Сохранено";
+  }
+
+  function saveStateClass() {
+    return saveFailed ? "save-state is-error" : "save-state";
+  }
+
+  function showSaveError() {
+    let box = document.getElementById("save-error");
+    const el = document.getElementById("save-state");
+    if (el) el.className = saveStateClass();
+    if (!saveFailed) {
+      if (box) box.remove();
+      return;
+    }
+    if (box) return;
+    box = document.createElement("div");
+    box.id = "save-error";
+    box.className = "save-error";
+    box.setAttribute("role", "alert");
+    box.textContent =
+      "Не удалось сохранить изменения в браузере: память переполнена или запрещена. " +
+      "Нажмите «Копия», чтобы сохранить данные в файл, иначе они пропадут после закрытия страницы.";
+    document.body.prepend(box);
   }
 
   function scheduleSave() {
@@ -356,7 +391,7 @@
       '<main class="wrap"><div class="panel"><div class="editor-head"><div><h2>Карточка ребёнка</h2>' +
       '<p class="muted">' +
       esc(child.fio || "Заполните данные. Изменения сохраняются сразу.") +
-      '</p></div><div class="toolbar"><span class="save-state" id="save-state">Сохранено</span>' +
+      '</p></div><div class="toolbar"><span class="' + saveStateClass() + '" id="save-state">' + saveLabel() + '</span>' +
       '<button class="btn btn-danger" data-action="delete-child" data-id="' +
       child.id +
       '">Удалить карточку</button></div></div><div class="fields two">' +
@@ -955,7 +990,7 @@
       esc(tpl.title) +
       " · " +
       esc(ageText(child.birthDate, map.date) || "") +
-      '</p></div><div class="save-state" id="save-state">Сохранено</div></div><div class="panel" id="section-panel">' +
+      '</p></div><div class="' + saveStateClass() + '" id="save-state">' + saveLabel() + '</div></div><div class="panel" id="section-panel">' +
       sectionHtml(child, map) +
       "</div></section></div>";
     printRoot.innerHTML = "";
