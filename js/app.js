@@ -8,6 +8,7 @@
   let scorePeriod = "start";
   let saveTimer = null;
   let saveFailed = false;
+  let motorCell = null;
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -590,32 +591,55 @@
     );
   }
 
+  function motorSel(name) {
+    return motorCell === "mot:" + name ? " class='selected'" : "";
+  }
+
+  function syncMotorBar() {
+    const input = motorCell && app.querySelector("input[name='" + motorCell.replace(/'/g, "\\'") + "']");
+    const picked = input ? splitMulti(input.value) : [];
+    app.querySelectorAll("table.data input[name^='mot:']").forEach(function (el) {
+      el.classList.toggle("selected", el === input);
+    });
+    app.querySelectorAll("[data-action='motor-pick']").forEach(function (chip) {
+      chip.classList.toggle("active", picked.indexOf(chip.dataset.value) >= 0);
+    });
+  }
+
   function sectionMotor(map) {
     let html =
       "<h2 class='section-title'>Мимическая и артикуляционная мускулатура</h2>" +
       "<p class='hint'>Отмечается: есть ли движение; замена, объём, точность, тонус, синкинезии, тремор, девиация, саливация, переключаемость, истощаемость.</p>" +
-      "<div class='toolbar'><span class='muted'>В пустые ячейки:</span>";
+      "<div class='toolbar motor-bar'><span class='muted'>В выбранную ячейку:</span>";
+    const picked = motorCell ? splitMulti(ans(map, motorCell)) : [];
     CHIPS.motor.forEach(function (item) {
       html +=
-        '<button type="button" class="chip" data-action="fill-motor" data-value="' +
+        '<button type="button" class="chip' +
+        (picked.indexOf(item) >= 0 ? " active" : "") +
+        '" data-action="motor-pick" data-value="' +
         esc(item) +
         '">' +
         esc(item) +
         "</button>";
     });
     html +=
+      "<button type='button' class='btn' data-action='fill-motor' data-value='N'>N во все пустые</button>" +
       "</div><div class='table-wrap'><table class='data'><thead><tr><th>Движение</th><th>Результат</th><th>Движение</th><th>Результат</th></tr></thead><tbody>";
     for (let i = 0; i < MOTOR_LEFT.length; i += 1) {
       html +=
         "<tr><td>" +
         esc(MOTOR_LEFT[i]) +
-        "</td><td><input name='mot:" +
+        "</td><td><input" +
+        motorSel(MOTOR_LEFT[i]) +
+        " name='mot:" +
         esc(MOTOR_LEFT[i]) +
         "' data-scope='map' value='" +
         esc(ans(map, "mot:" + MOTOR_LEFT[i])) +
         "'></td><td>" +
         esc(MOTOR_RIGHT[i]) +
-        "</td><td><input name='mot:" +
+        "</td><td><input" +
+        motorSel(MOTOR_RIGHT[i]) +
+        " name='mot:" +
         esc(MOTOR_RIGHT[i]) +
         "' data-scope='map' value='" +
         esc(ans(map, "mot:" + MOTOR_RIGHT[i])) +
@@ -1408,6 +1432,19 @@
     const el = e.target;
     if (!el.name) return;
     setValue(el);
+    if (el.name === motorCell) syncMotorBar();
+  });
+
+  app.addEventListener("focusin", function (e) {
+    const el = e.target;
+    if (!el.name || el.name.indexOf("mot:") !== 0) return;
+    motorCell = el.name;
+    syncMotorBar();
+  });
+
+  // Не уводить фокус из ячейки при нажатии на вариант
+  app.addEventListener("mousedown", function (e) {
+    if (e.target.closest("[data-action='motor-pick']")) e.preventDefault();
   });
 
   app.addEventListener("change", function (e) {
@@ -1527,6 +1564,21 @@
       fillSound(ctx.map, btn.dataset.sound);
       persist();
       renderEditor(ctx.child, ctx.map);
+    }
+    if (action === "motor-pick" && ctx.map) {
+      const input = motorCell && app.querySelector("input[name='" + motorCell.replace(/'/g, "\\'") + "']");
+      if (!input) {
+        alert("Сначала выберите ячейку в таблице.");
+        return;
+      }
+      const list = splitMulti(input.value);
+      const i = list.indexOf(btn.dataset.value);
+      if (i >= 0) list.splice(i, 1);
+      else list.push(btn.dataset.value);
+      input.value = list.join(", ");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      return;
     }
     if (action === "fill-motor" && ctx.map) {
       MOTOR_LEFT.concat(MOTOR_RIGHT).forEach(function (name) {
