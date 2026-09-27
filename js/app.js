@@ -9,6 +9,9 @@
   let saveTimer = null;
   let saveFailed = false;
   let motorCell = null;
+  // Ячейка для кнопки N над таблицей (слоговая структура, фонематика)
+  let nCell = null;
+  const N_PREFIXES = /^(syl|phr|pair|track):/;
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -526,7 +529,9 @@
           '">' +
           esc(value) +
           "</textarea>"
-        : '<input class="control" type="' +
+        : '<input class="control' +
+          (opts.selected ? " selected" : "") +
+          '" type="' +
           type +
           '" name="' +
           esc(name) +
@@ -1024,8 +1029,40 @@
     return html + "</tbody></table></div>";
   }
 
-  function pairTable(items, prefix, map, colTitle, chipsName) {
+  function nSel(name) {
+    return nCell === name ? " class='selected'" : "";
+  }
+
+  // Кнопка N над таблицей: ставится только в выбранную ячейку своей таблицы.
+  function nBar(prefix, map) {
+    const on = nCell && nCell.indexOf(prefix + ":") === 0 && ans(map, nCell) === "N";
+    return (
+      "<div class='toolbar motor-bar'><span class='muted'>В выбранную ячейку:</span>" +
+      "<button type='button' class='chip" +
+      (on ? " active" : "") +
+      "' data-action='n-pick' data-prefix='" +
+      prefix +
+      "' data-value='N'>N</button></div>"
+    );
+  }
+
+  function syncNBar() {
+    const input = nCell && app.querySelector("[name='" + nCell.replace(/'/g, "\\'") + "']");
+    app.querySelectorAll("input.selected").forEach(function (el) {
+      if (el !== input && N_PREFIXES.test(el.name)) el.classList.remove("selected");
+    });
+    if (input) input.classList.add("selected");
+    app.querySelectorAll("[data-action='n-pick']").forEach(function (btn) {
+      btn.classList.toggle(
+        "active",
+        !!input && nCell.indexOf(btn.dataset.prefix + ":") === 0 && input.value.trim() === "N"
+      );
+    });
+  }
+
+  function pairTable(items, prefix, map, colTitle) {
     let html =
+      nBar(prefix, map) +
       "<div class='table-wrap'><table class='data'><thead><tr><th>" +
       colTitle +
       "</th><th>Результат</th><th>" +
@@ -1038,31 +1075,31 @@
         "<tr><td>" +
         esc(a) +
         "</td><td>" +
-        (chipsName ? "<div class='cell-chips'>" + chips(prefix + ":" + a, chipsName) : "") +
-        "<input name='" +
+        "<input" +
+        nSel(prefix + ":" + a) +
+        " name='" +
         prefix +
         ":" +
         esc(a) +
         "' data-scope='map' value='" +
         esc(ans(map, prefix + ":" + a)) +
         "'>" +
-        (chipsName ? "</div>" : "") +
         "</td>";
       if (b) {
         html +=
           "<td>" +
           esc(b) +
           "</td><td>" +
-          (chipsName ? "<div class='cell-chips'>" + chips(prefix + ":" + b, chipsName) : "") +
-          "<input name='" +
+          "<input" +
+          nSel(prefix + ":" + b) +
+          " name='" +
           prefix +
           ":" +
           esc(b) +
           "' data-scope='map' value='" +
           esc(ans(map, prefix + ":" + b)) +
           "'>" +
-          (chipsName ? "</div>" : "") +
-          "</td>";
+            "</td>";
       } else html += "<td></td><td></td>";
       html += "</tr>";
     }
@@ -1072,10 +1109,12 @@
   function sectionSyllables(map, tpl) {
     let html =
       "<h2 class='section-title'>Слоговая структура</h2><p class='hint'>N — норма; иначе записывается речь ребёнка.</p>" +
-      pairTable(tpl.syllableWords, "syl", map, "Слово", "N") +
-      "<h3>Фразы</h3><div class='fields'>";
+      pairTable(tpl.syllableWords, "syl", map, "Слово") +
+      "<h3>Фразы</h3>" +
+      nBar("phr", map) +
+      "<div class='fields'>";
     tpl.phrases.forEach(function (phrase, i) {
-      html += field(phrase, "phr:" + i, { value: ans(map, "phr:" + i), chips: "N" });
+      html += field(phrase, "phr:" + i, { value: ans(map, "phr:" + i), selected: nCell === "phr:" + i });
     });
     return html + "</div>";
   }
@@ -1091,9 +1130,9 @@
     });
     html +=
       "<h3>Различение слов, близких по звучанию</h3>" +
-      pairTable(WORD_PAIRS, "pair", map, "Пара слов", "N") +
+      pairTable(WORD_PAIRS, "pair", map, "Пара слов") +
       "<h3>Звуковые дорожки</h3>" +
-      pairTable(SOUND_TRACKS, "track", map, "Ряд", "N");
+      pairTable(SOUND_TRACKS, "track", map, "Ряд");
     if (tpl.phonemIdea) {
       html += "<div class='fields'>" + field(tpl.phonemIdea, "idea", { value: ans(map, "idea") }) + "</div>";
     }
@@ -1783,18 +1822,25 @@
     if (!el.name) return;
     setValue(el);
     if (el.name === motorCell) syncMotorBar();
+    if (el.name === nCell) syncNBar();
   });
 
   app.addEventListener("focusin", function (e) {
     const el = e.target;
-    if (!el.name || el.name.indexOf("mot:") !== 0) return;
+    if (!el.name) return;
+    if (N_PREFIXES.test(el.name)) {
+      nCell = el.name;
+      syncNBar();
+      return;
+    }
+    if (el.name.indexOf("mot:") !== 0) return;
     motorCell = el.name;
     syncMotorBar();
   });
 
   // Не уводить фокус из ячейки при нажатии на вариант
   app.addEventListener("mousedown", function (e) {
-    if (e.target.closest("[data-action='motor-pick']")) e.preventDefault();
+    if (e.target.closest("[data-action='motor-pick'], [data-action='n-pick']")) e.preventDefault();
   });
 
   app.addEventListener("change", function (e) {
@@ -1966,6 +2012,20 @@
       if (i >= 0) list.splice(i, 1);
       else list.push(btn.dataset.value);
       input.value = list.join(", ");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      return;
+    }
+    if (action === "n-pick" && ctx.map) {
+      const input =
+        nCell &&
+        nCell.indexOf(btn.dataset.prefix + ":") === 0 &&
+        app.querySelector("[name='" + nCell.replace(/'/g, "\\'") + "']");
+      if (!input) {
+        alert("Сначала выберите ячейку в этой таблице.");
+        return;
+      }
+      input.value = input.value.trim() === "N" ? "" : "N";
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.focus();
       return;

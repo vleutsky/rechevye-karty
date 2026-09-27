@@ -404,13 +404,15 @@ table.data input {
   outline: none;
 }
 
-table.data input.selected {
+table.data input.selected,
+.control.selected {
   background: #e4ece6;
   box-shadow: inset 0 0 0 2px var(--focus);
 }
 
 @media print {
-  table.data input.selected {
+  table.data input.selected,
+  .control.selected {
     background: transparent;
     box-shadow: none;
   }
