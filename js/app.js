@@ -717,34 +717,42 @@
       html +=
         "<tr><td>" +
         esc(a) +
-        "</td><td><input name='" +
+        "</td><td>" +
+        (chipsName ? "<div class='cell-chips'>" + chips(prefix + ":" + a, chipsName) : "") +
+        "<input name='" +
         prefix +
         ":" +
         esc(a) +
         "' data-scope='map' value='" +
         esc(ans(map, prefix + ":" + a)) +
-        "'></td>";
+        "'>" +
+        (chipsName ? "</div>" : "") +
+        "</td>";
       if (b) {
         html +=
           "<td>" +
           esc(b) +
-          "</td><td><input name='" +
+          "</td><td>" +
+          (chipsName ? "<div class='cell-chips'>" + chips(prefix + ":" + b, chipsName) : "") +
+          "<input name='" +
           prefix +
           ":" +
           esc(b) +
           "' data-scope='map' value='" +
           esc(ans(map, prefix + ":" + b)) +
-          "'></td>";
+          "'>" +
+          (chipsName ? "</div>" : "") +
+          "</td>";
       } else html += "<td></td><td></td>";
       html += "</tr>";
     }
-    return html + "</tbody></table></div>" + (chipsName ? "<p class='hint'>Можно ставить N или записывать речь ребёнка.</p>" : "");
+    return html + "</tbody></table></div>";
   }
 
   function sectionSyllables(map, tpl) {
     let html =
       "<h2 class='section-title'>Слоговая структура</h2><p class='hint'>N — норма; иначе записывается речь ребёнка.</p>" +
-      pairTable(tpl.syllableWords, "syl", map, "Слово") +
+      pairTable(tpl.syllableWords, "syl", map, "Слово", "N") +
       "<h3>Фразы</h3><div class='fields'>";
     tpl.phrases.forEach(function (phrase, i) {
       html += field(phrase, "phr:" + i, { value: ans(map, "phr:" + i), chips: "N" });
@@ -1459,7 +1467,7 @@
   app.addEventListener("click", function (e) {
     const chip = e.target.closest(".chip");
     if (chip && chip.dataset.chip) {
-      const fieldBox = chip.closest(".field");
+      const fieldBox = chip.closest(".field, .cell-chips");
       const input = fieldBox && fieldBox.querySelector("input, textarea");
       if (input && chip.dataset.multi) {
         const list = splitMulti(input.value);
