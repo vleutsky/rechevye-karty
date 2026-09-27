@@ -167,15 +167,29 @@
     );
   }
 
-  function chips(name, setName) {
+  function splitMulti(value) {
+    return String(value || "")
+      .split(",")
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+  }
+
+  function chips(name, setName, multi, value) {
     const list = CHIPS[setName] || [];
     if (!list.length) return "";
+    const picked = multi ? splitMulti(value) : [];
     return (
       '<div class="chips">' +
       list
         .map(function (item) {
           return (
-            '<button type="button" class="chip" data-chip="' +
+            '<button type="button" class="chip' +
+            (picked.indexOf(item) >= 0 ? " active" : "") +
+            '"' +
+            (multi ? ' data-multi="1"' : "") +
+            ' data-chip="' +
             esc(name) +
             '" data-value="' +
             esc(item) +
@@ -221,7 +235,7 @@
       '"><span class="field-label">' +
       esc(label) +
       "</span>" +
-      (opts.chips ? chips(name, opts.chips) : "") +
+      (opts.chips ? chips(name, opts.chips, opts.multi, value) : "") +
       control +
       "</label>"
     );
@@ -470,23 +484,23 @@
   function sectionApparatus(map) {
     return (
       "<h2 class='section-title'>Речевой аппарат, голос, просодика</h2><div class='fields two'>" +
-      field("Губы", "lips", { value: ans(map, "lips"), chips: "lips" }) +
-      field("Зубы", "teeth", { value: ans(map, "teeth"), chips: "teeth" }) +
-      field("Клыки", "fangs", { value: ans(map, "fangs"), chips: "fangs" }) +
-      field("Прикус", "bite", { value: ans(map, "bite"), chips: "bite" }) +
-      field("Сагиттальная щель", "gap", { value: ans(map, "gap"), chips: "gap" }) +
-      field("Твёрдое нёбо", "palate", { value: ans(map, "palate"), chips: "palate" }) +
-      field("Нёбный шов", "suture", { value: ans(map, "suture"), chips: "suture" }) +
-      field("Мягкое нёбо", "soft", { value: ans(map, "soft"), chips: "soft" }) +
-      field("Язык", "tongue", { value: ans(map, "tongue"), chips: "tongue", span: true }) +
-      field("Подъязычная связка", "frenulum", { value: ans(map, "frenulum"), chips: "frenulum" }) +
+      field("Губы", "lips", { value: ans(map, "lips"), chips: "lips", multi: true }) +
+      field("Зубы", "teeth", { value: ans(map, "teeth"), chips: "teeth", multi: true }) +
+      field("Клыки", "fangs", { value: ans(map, "fangs"), chips: "fangs", multi: true }) +
+      field("Прикус", "bite", { value: ans(map, "bite"), chips: "bite", multi: true }) +
+      field("Сагиттальная щель", "gap", { value: ans(map, "gap"), chips: "gap", multi: true }) +
+      field("Твёрдое нёбо", "palate", { value: ans(map, "palate"), chips: "palate", multi: true }) +
+      field("Нёбный шов", "suture", { value: ans(map, "suture"), chips: "suture", multi: true }) +
+      field("Мягкое нёбо", "soft", { value: ans(map, "soft"), chips: "soft", multi: true }) +
+      field("Язык", "tongue", { value: ans(map, "tongue"), chips: "tongue", multi: true, span: true }) +
+      field("Подъязычная связка", "frenulum", { value: ans(map, "frenulum"), chips: "frenulum", multi: true }) +
       field("Крепление верхнее (к языку)", "frenUp", { value: ans(map, "frenUp") }) +
       field("Крепление нижнее", "frenDown", { value: ans(map, "frenDown") }) +
-      field("Голос", "voice", { value: ans(map, "voice"), chips: "voice" }) +
-      field("Темп", "tempo", { value: ans(map, "tempo"), chips: "tempo" }) +
-      field("Ритм", "rhythm", { value: ans(map, "rhythm"), chips: "rhythm" }) +
-      field("Паузация", "pause", { value: ans(map, "pause"), chips: "pause" }) +
-      field("Интонация", "intonation", { value: ans(map, "intonation"), chips: "intonation" }) +
+      field("Голос", "voice", { value: ans(map, "voice"), chips: "voice", multi: true }) +
+      field("Темп", "tempo", { value: ans(map, "tempo"), chips: "tempo", multi: true }) +
+      field("Ритм", "rhythm", { value: ans(map, "rhythm"), chips: "rhythm", multi: true }) +
+      field("Паузация", "pause", { value: ans(map, "pause"), chips: "pause", multi: true }) +
+      field("Интонация", "intonation", { value: ans(map, "intonation"), chips: "intonation", multi: true }) +
       "</div>"
     );
   }
@@ -1324,7 +1338,15 @@
     if (chip && chip.dataset.chip) {
       const fieldBox = chip.closest(".field");
       const input = fieldBox && fieldBox.querySelector("input, textarea");
-      if (input) {
+      if (input && chip.dataset.multi) {
+        const list = splitMulti(input.value);
+        const i = list.indexOf(chip.dataset.value);
+        if (i >= 0) list.splice(i, 1);
+        else list.push(chip.dataset.value);
+        input.value = list.join(", ");
+        chip.classList.toggle("active", i < 0);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (input) {
         input.value = chip.dataset.value;
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
