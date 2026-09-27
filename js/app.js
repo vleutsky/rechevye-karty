@@ -372,6 +372,8 @@
       return { view: "map", childId: parts[1], mapId: parts[3] };
     }
     if (parts[0] === "c") return { view: "child", childId: parts[1] };
+    if (parts[0] === "maps" && parts[1]) return { view: "sheet", childId: parts[1], mapId: parts[2] };
+    if (parts[0] === "maps") return { view: "maps" };
     return { view: "home" };
   }
 
@@ -565,6 +567,84 @@
     );
   }
 
+  function mainTabs(active) {
+    return (
+      '<div class="tabs main-tabs">' +
+      '<button class="btn' + (active === "home" ? " btn-primary" : "") + '" data-action="home">Дети</button>' +
+      '<button class="btn' + (active === "maps" ? " btn-primary" : "") + '" data-action="maps">Карты</button>' +
+      "</div>"
+    );
+  }
+
+  function renderMaps() {
+    const groups = db.children
+      .filter(function (child) {
+        return (child.maps || []).length;
+      })
+      .sort(function (a, b) {
+        return (a.fio || "").localeCompare(b.fio || "", "ru");
+      });
+
+    const body = groups.length
+      ? groups
+          .map(function (child) {
+            const maps = child.maps.slice().sort(function (a, b) {
+              return (a.date || "").localeCompare(b.date || "");
+            });
+            return (
+              '<section class="panel"><h2>' +
+              esc(child.fio || "Без имени") +
+              "</h2><div class='meta'><span class='pill'>" +
+              esc(ageText(child.birthDate) || "возраст не указан") +
+              "</span><span>" +
+              esc(child.group || "группа не указана") +
+              '</span></div><div class="list">' +
+              maps
+                .map(function (map) {
+                  const tpl = AGES[map.age] || AGES[5];
+                  const onDate = ageText(child.birthDate, map.date);
+                  return (
+                    '<div class="map-item"><div><b>' +
+                    esc(tpl.title) +
+                    "</b><div class='muted'>дата обследования: " +
+                    esc(fmtDate(map.date) || "не указана") +
+                    (onDate ? "; возраст на дату: " + esc(onDate) : "") +
+                    "</div></div><div class='toolbar'>" +
+                    '<button class="btn btn-primary" data-action="open-sheet" data-child="' + child.id + '" data-id="' + map.id + '">Открыть</button>' +
+                    '<button class="btn btn-clay" data-action="print-map" data-child="' + child.id + '" data-id="' + map.id + '">Печать</button>' +
+                    "</div></div>"
+                  );
+                })
+                .join("") +
+              "</div></section>"
+            );
+          })
+          .join("")
+      : '<div class="card empty"><h2>Карт пока нет</h2><p class="muted">Откройте карточку ребёнка во вкладке «Дети» и создайте речевую карту.</p></div>';
+
+    app.innerHTML =
+      topbar() +
+      '<main class="wrap">' +
+      mainTabs("maps") +
+      '<div class="hero"><div><h2>Речевые карты</h2><p class="muted">Все карты по детям в печатном виде.</p></div></div>' +
+      body +
+      "</main>";
+    printRoot.innerHTML = "";
+  }
+
+  function renderSheet(child, map) {
+    app.innerHTML =
+      topbar(
+        '<button class="btn" data-action="maps">К картам</button>' +
+          '<button class="btn" data-action="edit-sheet">Изменить</button>' +
+          '<button class="btn btn-clay" data-action="print">Печать</button>'
+      ) +
+      '<main class="wrap"><div class="sheet">' +
+      printHtml(child, map) +
+      "</div></main>";
+    printRoot.innerHTML = "";
+  }
+
   function renderHome() {
     const q = query.trim().toLowerCase();
     const list = db.children
@@ -607,7 +687,9 @@
 
     app.innerHTML =
       topbar() +
-      '<main class="wrap"><div class="hero"><div><h2>Дети</h2><p class="muted">Данные хранятся только на этом компьютере.</p></div>' +
+      '<main class="wrap">' +
+      mainTabs("home") +
+      '<div class="hero"><div><h2>Дети</h2><p class="muted">Данные хранятся только на этом компьютере.</p></div>' +
       '<div class="toolbar"><input class="search" name="query" placeholder="Поиск по имени" value="' +
       esc(query) +
       '"><button class="btn btn-primary" data-action="add-child">Добавить ребёнка</button></div></div>' +
@@ -1584,6 +1666,18 @@
       renderEditor(ctx.child, ctx.map);
       return;
     }
+    if (ctx.r.view === "maps") {
+      renderMaps();
+      return;
+    }
+    if (ctx.r.view === "sheet") {
+      if (!ctx.child || !ctx.map) {
+        location.hash = "#/maps";
+        return;
+      }
+      renderSheet(ctx.child, ctx.map);
+      return;
+    }
     if (ctx.r.view === "child") {
       if (!ctx.child) {
         location.hash = "#/";
@@ -1744,6 +1838,17 @@
     const ctx = current();
 
     if (action === "home") location.hash = "#/";
+    if (action === "maps") location.hash = "#/maps";
+    if (action === "open-sheet") location.hash = "#/maps/" + btn.dataset.child + "/" + btn.dataset.id;
+    if (action === "edit-sheet" && ctx.child && ctx.map) location.hash = "#/c/" + ctx.child.id + "/m/" + ctx.map.id;
+    if (action === "print-map") {
+      const pc = findChild(btn.dataset.child);
+      const pm = pc && findMap(pc, btn.dataset.id);
+      if (pm) {
+        printRoot.innerHTML = printHtml(pc, pm);
+        window.print();
+      }
+    }
     if (action === "open-child") location.hash = "#/c/" + btn.dataset.id;
     if (action === "open-map") location.hash = "#/c/" + ctx.child.id + "/m/" + btn.dataset.id;
     if (action === "section") {

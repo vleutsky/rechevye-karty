@@ -18,72 +18,90 @@
   #print-root {
     display: block !important;
   }
+}
 
-  .print-doc {
-    font: 12pt/1.35 "Times New Roman", Times, serif;
-    color: #000;
-  }
+/* Печатный вид карты: и для печати, и для просмотра во вкладке «Карты» */
+.print-doc {
+  font: 12pt/1.35 "Times New Roman", Times, serif;
+  color: #000;
+}
 
-  .print-doc h1 {
-    text-align: center;
-    font-size: 16pt;
-    margin: 0 0 4pt;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
+.print-doc h1 {
+  text-align: center;
+  font-size: 16pt;
+  margin: 0 0 4pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
-  .print-doc .sub {
-    text-align: center;
-    margin: 0 0 6pt;
-    font-size: 12pt;
-  }
+.print-doc .sub {
+  text-align: center;
+  margin: 0 0 6pt;
+  font-size: 12pt;
+}
 
-  .print-doc .src {
-    text-align: center;
-    font-size: 9pt;
-    margin: 0 0 14pt;
-  }
+.print-doc .src {
+  text-align: center;
+  font-size: 9pt;
+  margin: 0 0 14pt;
+}
 
-  .print-doc h2 {
-    font-size: 13pt;
-    margin: 12pt 0 6pt;
-    page-break-after: avoid;
-  }
+.print-doc h2 {
+  font-size: 13pt;
+  margin: 12pt 0 6pt;
+  page-break-after: avoid;
+}
 
-  .print-line {
-    margin: 0 0 5pt;
-  }
+.print-line {
+  margin: 0 0 5pt;
+}
 
-  .u {
-    border-bottom: 1px solid #000;
-    min-height: 14pt;
-    display: inline-block;
-    min-width: 4em;
-    padding: 0 2pt;
-  }
+.u {
+  border-bottom: 1px solid #000;
+  min-height: 14pt;
+  display: inline-block;
+  min-width: 4em;
+  padding: 0 2pt;
+}
 
-  table.print {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0 0 8pt;
-    page-break-inside: avoid;
-    font-size: 11pt;
-  }
+table.print {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 8pt;
+  page-break-inside: avoid;
+  font-size: 11pt;
+}
 
-  table.print th,
-  table.print td {
-    border: 1px solid #000;
-    padding: 3pt 4pt;
-    vertical-align: top;
-  }
+table.print th,
+table.print td {
+  border: 1px solid #000;
+  padding: 3pt 4pt;
+  vertical-align: top;
+}
 
-  .pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 16pt;
-  }
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16pt;
+}
 
-  .keep {
-    page-break-inside: avoid;
+.keep {
+  page-break-inside: avoid;
+}
+
+/* Лист A4 на экране */
+.sheet {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 14mm 16mm;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+}
+
+@media (max-width: 700px) {
+  .sheet {
+    padding: 16px;
   }
 }
