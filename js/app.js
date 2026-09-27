@@ -61,6 +61,55 @@
     }, 250);
   }
 
+  const BACKUP_KEY = STORAGE_KEY + ":backupAt";
+  const SNOOZE_KEY = STORAGE_KEY + ":backupSnooze";
+  const BACKUP_DAYS = 7;
+  const DAY = 24 * 60 * 60 * 1000;
+
+  function readNum(key) {
+    try {
+      return Number(localStorage.getItem(key)) || 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  function writeNum(key, value) {
+    try {
+      localStorage.setItem(key, String(value));
+    } catch (err) {}
+  }
+
+  function markBackup() {
+    writeNum(BACKUP_KEY, Date.now());
+    writeNum(SNOOZE_KEY, 0);
+  }
+
+  function backupNotice() {
+    if (!db.children.length || !db.savedAt) return "";
+    const now = Date.now();
+    let backupAt = readNum(BACKUP_KEY);
+    if (!backupAt) {
+      // Копию ещё не делали: отсчёт с первого запуска с данными.
+      backupAt = now;
+      writeNum(BACKUP_KEY, backupAt);
+    }
+    if (db.savedAt <= backupAt) return "";
+    if (now - backupAt < BACKUP_DAYS * DAY) return "";
+    if (now < readNum(SNOOZE_KEY)) return "";
+    const days = Math.floor((now - backupAt) / DAY);
+    return (
+      '<div class="backup-note" role="status">' +
+      "<span>Копию картотеки не сохраняли " +
+      days +
+      " дн. Данные хранятся только в этом браузере — сохраните файл копии.</span>" +
+      '<div class="row">' +
+      '<button class="btn btn-primary" data-action="export">Сохранить копию</button>' +
+      '<button class="btn btn-ghost" data-action="snooze-backup">Позже</button>' +
+      "</div></div>"
+    );
+  }
+
   function route() {
     const parts = (location.hash.replace(/^#/, "") || "/").split("/").filter(Boolean);
     if (parts[0] === "c" && parts[2] === "m") {
@@ -163,7 +212,8 @@
       '<button class="btn" data-action="export">Копия</button>' +
       '<button class="btn" data-action="import">Загрузить копию</button>' +
       '<input class="hidden-file" id="import-file" type="file" accept="application/json">' +
-      "</div></header>"
+      "</div></header>" +
+      backupNotice()
     );
   }
 
@@ -1392,6 +1442,14 @@
       a.download = "rechevye-karty-" + today() + ".json";
       a.click();
       URL.revokeObjectURL(a.href);
+      markBackup();
+      const note = app.querySelector(".backup-note");
+      if (note) note.remove();
+    }
+    if (action === "snooze-backup") {
+      writeNum(SNOOZE_KEY, Date.now() + 3 * DAY);
+      const note = app.querySelector(".backup-note");
+      if (note) note.remove();
     }
     if (action === "import") document.getElementById("import-file").click();
     if (action === "fill-vowels" && ctx.map) {
@@ -1434,6 +1492,7 @@
         if (!confirm("Заменить текущую картотеку загруженной копией?")) return;
         db = data;
         persist();
+        markBackup();
         location.hash = "#/";
         render();
       } catch (err) {
