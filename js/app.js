@@ -1526,8 +1526,7 @@
         if (!data.children) throw new Error("no children");
         if (!confirm("Заменить текущую картотеку загруженной копией?")) return;
         db = data;
-        persist();
-        markBackup();
+        if (persist()) markBackup();
         location.hash = "#/";
         render();
       } catch (err) {
