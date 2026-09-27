@@ -560,3 +560,11 @@ table.data input.selected {
   min-height: 26px;
   padding: 2px 8px;
 }
+
+.field .mark {
+  margin-top: 4px;
+}
+
+.mark .chips {
+  flex-wrap: nowrap;
+}
