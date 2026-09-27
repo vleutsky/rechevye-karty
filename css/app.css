@@ -506,3 +506,14 @@ table.data input {
 #print-root {
   display: none;
 }
+
+.cell-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cell-chips .chip {
+  min-height: 26px;
+  padding: 2px 8px;
+}
