@@ -285,6 +285,22 @@ a {
   color: var(--ok);
 }
 
+.save-state.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.save-error {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 10px 16px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .fields {
   display: grid;
   gap: 12px;
@@ -433,6 +449,21 @@ table.data input {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.backup-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 22px 0;
+  padding: 10px 14px;
+  background: #fbf1e8;
+  border: 1px solid #ecd3bf;
+  border-radius: 12px;
+  color: var(--clay-2);
+  font-size: 14px;
 }
 
 .notice {
