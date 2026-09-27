@@ -451,6 +451,21 @@ table.data input {
   margin-bottom: 12px;
 }
 
+.backup-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 22px 0;
+  padding: 10px 14px;
+  background: #fbf1e8;
+  border: 1px solid #ecd3bf;
+  border-radius: 12px;
+  color: var(--clay-2);
+  font-size: 14px;
+}
+
 .notice {
   background: #eef5ee;
   border: 1px solid #cfe0d1;
