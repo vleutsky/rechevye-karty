@@ -265,7 +265,7 @@
   function chips(name, setName, multi, value) {
     const list = CHIPS[setName] || [];
     if (!list.length) return "";
-    const picked = multi ? splitMulti(value) : [];
+    const picked = multi ? splitMulti(value) : setName === "rw" && value ? [value] : [];
     return (
       '<div class="chips">' +
       list
@@ -323,7 +323,23 @@
       "</span>" +
       (opts.chips ? chips(name, opts.chips, opts.multi, value) : "") +
       control +
+      (opts.mark ? mark(opts.mark, name) : "") +
       "</label>"
+    );
+  }
+
+  // Отметка «верно / неверно» у пункта грамматики; хранится отдельно от ответа ребёнка.
+  function mark(map, name) {
+    const key = "ok:" + name;
+    const value = ans(map, key);
+    return (
+      "<div class='cell-chips mark'>" +
+      chips(key, "rw", false, value) +
+      "<input type='hidden' name='" +
+      esc(key) +
+      "' data-scope='map' value='" +
+      esc(value) +
+      "'></div>"
     );
   }
 
@@ -789,9 +805,9 @@
       esc(tpl.plural.sample[1]) +
       "</p><div class='fields two'>";
     tpl.plural.words.forEach(function (word) {
-      html += field(word, "plur:" + word, { value: ans(map, "plur:" + word) });
+      html += field(word, "plur:" + word, { value: ans(map, "plur:" + word), mark: map });
     });
-    html += "</div><h3>Б. Согласование с числительными</h3><div class='table-wrap'><table class='data'><thead><tr><th>1</th><th>2</th><th>5</th></tr></thead><tbody>";
+    html += "</div><h3>Б. Согласование с числительными</h3><div class='table-wrap'><table class='data'><thead><tr><th>1</th><th>2</th><th>5</th><th>Оценка</th></tr></thead><tbody>";
     tpl.numerals.forEach(function (word) {
       html +=
         "<tr><td>" +
@@ -804,21 +820,23 @@
         esc(word) +
         ":5' data-scope='map' value='" +
         esc(ans(map, "num:" + word + ":5")) +
-        "'></td></tr>";
+        "'></td><td>" +
+        mark(map, "num:" + word) +
+        "</td></tr>";
     });
     html +=
       "</tbody></table></div><h3>В. Согласование падежных окончаний</h3><div class='table-wrap'><table class='data'><thead><tr><th>Падеж</th>";
     CASE_WORDS.forEach(function (w) {
       html += "<th>" + esc(w) + "</th>";
     });
-    html += "</tr></thead><tbody>";
+    html += "<th>Оценка</th></tr></thead><tbody>";
     CASES.forEach(function (c) {
       html += "<tr><td>" + esc(c.label) + "</td>";
       CASE_WORDS.forEach(function (w) {
         const name = "case:" + w + ":" + c.id;
         html += "<td><input name='" + name + "' data-scope='map' value='" + esc(ans(map, name)) + "'></td>";
       });
-      html += "</tr>";
+      html += "<td>" + mark(map, "case:" + c.id) + "</td></tr>";
     });
     html +=
       "</tbody></table></div><h3>Словообразование. А. Уменьшительно-ласкательные формы</h3>" +
@@ -828,13 +846,13 @@
       esc(tpl.diminutive.sample[1]) +
       "</p><div class='fields two'>";
     tpl.diminutive.words.forEach(function (word) {
-      html += field(word, "dim:" + word, { value: ans(map, "dim:" + word) });
+      html += field(word, "dim:" + word, { value: ans(map, "dim:" + word), mark: map });
     });
     html +=
       "</div><h3>Б. Согласование с предлогами (" +
       esc(tpl.prepositions) +
       ")</h3><div class='fields'>" +
-      field("По сюжетной картинке", "prep", { value: ans(map, "prep"), type: "textarea" }) +
+      field("По сюжетной картинке", "prep", { value: ans(map, "prep"), type: "textarea", mark: map }) +
       "</div>";
     tpl.extraGrammar.forEach(function (block) {
       html += "<h3>" + esc(block.title) + "</h3>";
@@ -847,14 +865,14 @@
           "</p><div class='fields two'>";
         block.words.forEach(function (word) {
           const prefix = block.type === "relative" ? "rel:" : "pos:";
-          html += field(word, prefix + word, { value: ans(map, prefix + word) });
+          html += field(word, prefix + word, { value: ans(map, prefix + word), mark: map });
         });
         html += "</div>";
       }
       if (block.prefixes) {
         html += "<p class='hint'>" + esc(block.hint) + "</p><div class='fields two'>";
         block.prefixes.forEach(function (p) {
-          html += field(p + "-шёл", "pref:" + p, { value: ans(map, "pref:" + p) });
+          html += field(p + "-шёл", "pref:" + p, { value: ans(map, "pref:" + p), mark: map });
         });
         html += "</div>";
       }
@@ -1052,6 +1070,12 @@
     return '<p class="print-line">' + esc(label) + " " + u(value) + "</p>";
   }
 
+  function withMark(map, name) {
+    const m = ans(map, "ok:" + name);
+    const v = ans(map, name);
+    return m ? (v ? v + " — " : "") + m : v;
+  }
+
   function printTable(headers, rows) {
     let html = '<table class="print"><thead><tr>';
     headers.forEach(function (h) {
@@ -1237,43 +1261,44 @@
 
     html += "<h2>Грамматический строй</h2><p>А. Ед. число → мн. число. Образец: " + esc(tpl.plural.sample[0]) + " → " + esc(tpl.plural.sample[1]) + "</p>";
     tpl.plural.words.forEach(function (w) {
-      html += line(w, ans(map, "plur:" + w));
+      html += line(w, withMark(map, "plur:" + w));
     });
     html += "<p>Б. Согласование с числительными</p>";
     html += printTable(
-      ["1", "2", "5"],
+      ["1", "2", "5", "Оценка"],
       tpl.numerals.map(function (w) {
-        return [w, esc(ans(map, "num:" + w + ":2")), esc(ans(map, "num:" + w + ":5"))];
+        return [w, esc(ans(map, "num:" + w + ":2")), esc(ans(map, "num:" + w + ":5")), esc(ans(map, "ok:num:" + w))];
       })
     );
     html += "<p>В. Согласование падежных окончаний</p>";
     html += printTable(
-      ["Падеж"].concat(CASE_WORDS),
+      ["Падеж"].concat(CASE_WORDS, ["Оценка"]),
       CASES.map(function (c) {
         return [c.label].concat(
           CASE_WORDS.map(function (w) {
             return esc(ans(map, "case:" + w + ":" + c.id));
-          })
+          }),
+          [esc(ans(map, "ok:case:" + c.id))]
         );
       })
     );
     html += "<p>Словообразование. Образец: " + esc(tpl.diminutive.sample[0]) + " → " + esc(tpl.diminutive.sample[1]) + "</p>";
     tpl.diminutive.words.forEach(function (w) {
-      html += line(w, ans(map, "dim:" + w));
+      html += line(w, withMark(map, "dim:" + w));
     });
-    html += line("Предлоги (" + tpl.prepositions + ")", ans(map, "prep"));
+    html += line("Предлоги (" + tpl.prepositions + ")", withMark(map, "prep"));
     tpl.extraGrammar.forEach(function (block) {
       html += "<p>" + esc(block.title) + "</p>";
       if (block.sample) {
         html += "<p>Образец: " + esc(block.sample[0]) + " → " + esc(block.sample[1]) + "</p>";
         block.words.forEach(function (w) {
-          html += line(w, ans(map, (block.type === "relative" ? "rel:" : "pos:") + w));
+          html += line(w, withMark(map, (block.type === "relative" ? "rel:" : "pos:") + w));
         });
       }
       if (block.prefixes) {
         html += "<p>" + esc(block.hint) + "</p>";
         block.prefixes.forEach(function (p) {
-          html += line(p + "-шёл", ans(map, "pref:" + p));
+          html += line(p + "-шёл", withMark(map, "pref:" + p));
         });
       }
     });
@@ -1476,6 +1501,13 @@
         else list.push(chip.dataset.value);
         input.value = list.join(", ");
         chip.classList.toggle("active", i < 0);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (input && fieldBox.classList.contains("mark")) {
+        const on = input.value !== chip.dataset.value;
+        input.value = on ? chip.dataset.value : "";
+        fieldBox.querySelectorAll(".chip").forEach(function (c) {
+          c.classList.toggle("active", on && c === chip);
+        });
         input.dispatchEvent(new Event("input", { bubbles: true }));
       } else if (input) {
         input.value = chip.dataset.value;
