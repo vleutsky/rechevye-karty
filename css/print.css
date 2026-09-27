@@ -10,7 +10,8 @@
     color: #000;
   }
 
-  #app {
+  #app,
+  .save-error {
     display: none !important;
   }
 
