@@ -433,25 +433,33 @@
     };
   }
 
-  function emptyMap(age) {
-    return {
-      id: uid(),
-      age: Number(age),
-      date: today(),
-      answers: {},
-      scores: {
-        start: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", conclusion: "" },
-        mid: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", conclusion: "" },
-        end: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", conclusion: "" },
-      },
-      conclusions: { year1: "", year2: "", year3: "" },
-      signDate: "",
-      head: "",
-      logoped: "",
-      diary: "",
-      missedDays: "",
-      incomplete: false,
+  function emptyMap(age, kind) {
+    const map = { id: uid(), age: Number(age), date: today(), answers: {} };
+    if (kind === "vpf") {
+      map.type = "vpf";
+      return map;
+    }
+    map.scores = {
+      start: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", conclusion: "" },
+      mid: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", conclusion: "" },
+      end: { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", conclusion: "" },
     };
+    map.conclusions = { year1: "", year2: "", year3: "" };
+    map.signDate = "";
+    map.head = "";
+    map.logoped = "";
+    map.diary = "";
+    map.missedDays = "";
+    map.incomplete = false;
+    return map;
+  }
+
+  function mapTitle(map) {
+    if (map.type === "vpf") {
+      const tpl = VPF[map.age];
+      return tpl ? "Диагностическая карта ВПФ — " + tpl.group : "Диагностическая карта ВПФ";
+    }
+    return (AGES[map.age] || AGES[5]).title;
   }
 
   function ans(map, key) {
@@ -606,11 +614,10 @@
               '</span></div><div class="list">' +
               maps
                 .map(function (map) {
-                  const tpl = AGES[map.age] || AGES[5];
                   const onDate = ageText(child.birthDate, map.date);
                   return (
                     '<div class="map-item"><div><b>' +
-                    esc(tpl.title) +
+                    esc(mapTitle(map)) +
                     "</b><div class='muted'>дата обследования: " +
                     esc(fmtDate(map.date) || "не указана") +
                     (onDate ? "; возраст на дату: " + esc(onDate) : "") +
@@ -645,7 +652,7 @@
           '<button class="btn btn-clay" data-action="print">Печать</button>'
       ) +
       '<main class="wrap"><div class="sheet">' +
-      printHtml(child, map) +
+      printDoc(child, map) +
       "</div></main>";
     printRoot.innerHTML = "";
   }
@@ -709,10 +716,9 @@
       ? '<div class="list">' +
         maps
           .map(function (map) {
-            const tpl = AGES[map.age] || AGES[5];
             return (
               '<div class="map-item"><div><b>' +
-              esc(tpl.title) +
+              esc(mapTitle(map)) +
               "</b><div class='muted'>дата обследования: " +
               esc(map.date || "не указана") +
               "</div></div><div class='toolbar'><button class='btn btn-primary' data-action='open-map' data-id='" +
@@ -752,6 +758,11 @@
       '<div class="toolbar"><button class="btn btn-primary" data-action="add-map" data-age="4">Карта 4 года</button>' +
       '<button class="btn btn-primary" data-action="add-map" data-age="5">Карта 5 лет</button>' +
       '<button class="btn btn-primary" data-action="add-map" data-age="6">Карта 6 лет</button></div>' +
+      "<h2>Экспресс-диагностика ВПФ (Павлова, Руденко)</h2>" +
+      '<div class="toolbar"><button class="btn" data-action="add-map" data-age="3" data-kind="vpf">3–4 года</button>' +
+      '<button class="btn" data-action="add-map" data-age="4" data-kind="vpf">4–5 лет</button>' +
+      '<button class="btn" data-action="add-map" data-age="5" data-kind="vpf">5–6 лет</button>' +
+      '<button class="btn" data-action="add-map" data-age="6" data-kind="vpf">6–7 лет</button></div>' +
       mapList +
       "</div></main>";
     printRoot.innerHTML = "";
@@ -1368,7 +1379,148 @@
     );
   }
 
+  // ---- Диагностическая карта ВПФ (экспресс-диагностика Павловой, Руденко) ----
+
+  function vpfSum(map, tpl) {
+    let total = 0;
+    let filled = 0;
+    tpl.subtests.forEach(function (item, i) {
+      const v = ans(map, "vpt:" + (i + 1));
+      if (v !== "") {
+        total += Number(v) || 0;
+        filled += 1;
+      }
+    });
+    return { total: total, filled: filled, max: tpl.subtests.length * 2 };
+  }
+
+  function vpfLevelText(sum, tpl) {
+    if (!sum.filled) return "";
+    const level = sum.total >= tpl.highFrom ? "высокий" : sum.total >= tpl.midFrom ? "средний" : "низкий";
+    const range =
+      level === "высокий"
+        ? tpl.highFrom + "–" + sum.max
+        : level === "средний"
+          ? tpl.midFrom + "–" + (tpl.highFrom - 1)
+          : "0–" + (tpl.midFrom - 1);
+    return level + " (" + range + " баллов)";
+  }
+
+  function vpfPanel(child, map) {
+    const tpl = VPF[map.age];
+    let html =
+      "<h2 class='section-title'>Диагностическая карта (экспресс-диагностика ВПФ)</h2>" +
+      "<p class='hint'>" +
+      esc(VPF_SOURCE) +
+      "</p><p class='hint'>" +
+      esc(VPF_SCORE_HINT) +
+      "</p><div class='fields two'>" +
+      field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
+      field("Дата рождения", "birthDate", {
+        scope: "child",
+        type: "date",
+        value: child.birthDate,
+        min: "1990-01-01",
+        max: today(),
+      }) +
+      field("Возраст", "ageCalc", { scope: "readonly", value: ageText(child.birthDate, map.date) }) +
+      field("Дата обследования", "date", { scope: "mapField", type: "date", value: map.date }) +
+      field("Группа", "group", { scope: "child", value: child.group }) +
+      "</div><h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Оцениваемая функция</th><th>Балл</th></tr></thead><tbody>";
+    tpl.subtests.forEach(function (item, i) {
+      const n = i + 1;
+      const current = ans(map, "vpt:" + n);
+      html +=
+        "<tr><td>" +
+        n +
+        "</td><td>" +
+        esc(item.name) +
+        "</td><td>" +
+        esc(item.fn) +
+        "</td><td class='vpf-opts'>" +
+        [2, 1, 0]
+          .map(function (v) {
+            return (
+              "<label><input type='radio' name='vpt:" +
+              n +
+              "' data-scope='map' value='" +
+              v +
+              "'" +
+              (current === String(v) ? " checked" : "") +
+              "> " +
+              v +
+              "</label>"
+            );
+          })
+          .join("") +
+        "</td></tr>";
+    });
+    const sum = vpfSum(map, tpl);
+    html +=
+      "</tbody></table></div><div class='notice'><b>Итого: " +
+      sum.total +
+      " из " +
+      sum.max +
+      "</b> (заполнено субтестов: " +
+      sum.filled +
+      " из " +
+      tpl.subtests.length +
+      "). Уровень: " +
+      (vpfLevelText(sum, tpl) || "заполните баллы") +
+      ".</div>" +
+      "<h3>Беседа-знакомство</h3><div class='fields'>" +
+      field("Как вступает в контакт (с кем охотнее, активность, инициатива, речевой негативизм)", "vpf:contact", {
+        value: ans(map, "vpf:contact"),
+        type: "textarea",
+      }) +
+      "</div><h3>Наблюдение</h3><div class='fields two'>" +
+      field("Личностные особенности, эмоционально-волевая сфера", "vpf:personality", {
+        value: ans(map, "vpf:personality"),
+        type: "textarea",
+      }) +
+      field("Игровая деятельность", "vpf:play", { value: ans(map, "vpf:play"), type: "textarea" }) +
+      field("Продуктивные виды деятельности", "vpf:productive", {
+        value: ans(map, "vpf:productive"),
+        type: "textarea",
+      }) +
+      field("Двигательная сфера", "vpf:motor", { value: ans(map, "vpf:motor"), type: "textarea" }) +
+      "</div><h3>Примечания</h3><div class='fields'>" +
+      field("Примечания", "vpf:notes", { value: ans(map, "vpf:notes"), type: "textarea" }) +
+      "</div><h3>Рекомендации</h3><div class='fields'>" +
+      field("Рекомендации", "vpf:recs", { value: ans(map, "vpf:recs"), type: "textarea" }) +
+      "</div><div class='fields two'>" +
+      field("Проводил обследование", "vpf:examiner", { value: ans(map, "vpf:examiner") }) +
+      "</div>";
+    return html;
+  }
+
+  function renderVpfEditor(child, map) {
+    app.innerHTML =
+      topbar(
+        '<button class="btn" data-action="open-child" data-id="' +
+          child.id +
+          '">К ребёнку</button>' +
+          '<button class="btn btn-primary" data-action="save-draft">Сохранить черновик</button>' +
+          '<button class="btn btn-clay" data-action="print">Печать</button>'
+      ) +
+      '<main class="wrap"><div class="editor-head"><div><h2>' +
+      esc(child.fio || "Ребёнок") +
+      "</h2><p class='muted'>" +
+      esc(mapTitle(map)) +
+      " · " +
+      esc(ageText(child.birthDate, map.date) || "") +
+      '</p></div><div class="' + saveStateClass() + '" id="save-state">' + saveLabel() + '</div></div>' +
+      '<div class="panel" id="section-panel">' +
+      vpfPanel(child, map) +
+      "</div></main>";
+    printRoot.innerHTML = "";
+  }
+
   function renderEditor(child, map) {
+    if (map.type === "vpf") {
+      renderVpfEditor(child, map);
+      return;
+    }
     const tpl = AGES[map.age];
     const nav = SECTIONS.map(function (item) {
       return (
@@ -1688,6 +1840,62 @@
     return html;
   }
 
+  function printDoc(child, map) {
+    return map.type === "vpf" ? vpfPrintHtml(child, map) : printHtml(child, map);
+  }
+
+  function vpfPrintHtml(child, map) {
+    const tpl = VPF[map.age];
+    const sum = vpfSum(map, tpl);
+    const rows = tpl.subtests.map(function (item, i) {
+      return [
+        String(i + 1),
+        esc(item.name),
+        esc(item.fn),
+        esc(ans(map, "vpt:" + (i + 1))),
+      ];
+    });
+    return (
+      '<article class="print-doc"><h1>Диагностическая карта</h1>' +
+      '<p class="sub">Экспресс-диагностика в детском саду (ВПФ) — ' +
+      esc(tpl.group) +
+      "</p>" +
+      '<p class="src">' +
+      esc(VPF_SOURCE) +
+      "</p>" +
+      line("Фамилия, имя, отчество ребёнка", child.fio) +
+      '<div class="pair">' +
+      line("Дата рождения", fmtDate(child.birthDate)) +
+      line("Возраст", ageText(child.birthDate, map.date)) +
+      line("Дата обследования", fmtDate(map.date)) +
+      line("Группа", child.group) +
+      "</div>" +
+      "<h2>Субтесты</h2><p>" +
+      esc(VPF_SCORE_HINT) +
+      "</p>" +
+      printTable(["№", "Субтест", "Оцениваемая функция", "Балл"], rows) +
+      '<div class="pair">' +
+      line("Итого баллов", sum.filled ? sum.total + " из " + sum.max : "") +
+      line("Уровень", vpfLevelText(sum, tpl)) +
+      "</div>" +
+      "<h2>Беседа-знакомство</h2>" +
+      line("Как вступает в контакт", ans(map, "vpf:contact")) +
+      "<h2>Наблюдение</h2>" +
+      line("Личностные особенности, эмоционально-волевая сфера", ans(map, "vpf:personality")) +
+      line("Игровая деятельность", ans(map, "vpf:play")) +
+      line("Продуктивные виды деятельности", ans(map, "vpf:productive")) +
+      line("Двигательная сфера", ans(map, "vpf:motor")) +
+      "<h2>Примечания</h2>" +
+      line("", ans(map, "vpf:notes")) +
+      "<h2>Рекомендации</h2>" +
+      line("", ans(map, "vpf:recs")) +
+      '<div class="pair">' +
+      line("Дата", fmtDate(map.date)) +
+      line("Проводил обследование", ans(map, "vpf:examiner")) +
+      "</div></article>"
+    );
+  }
+
   function current() {
     const r = route();
     const child = r.childId ? findChild(r.childId) : null;
@@ -1802,6 +2010,13 @@
       if (panel) panel.innerHTML = sectionHtml(child, map);
       return;
     }
+    if (name.indexOf("vpt:") === 0) {
+      map.answers[name] = el.value;
+      scheduleSave();
+      const panel = document.getElementById("section-panel");
+      if (panel && map.type === "vpf") panel.innerHTML = vpfPanel(child, map);
+      return;
+    }
     map.answers[name] = el.value;
     scheduleSave();
   }
@@ -1891,7 +2106,7 @@
       const pc = findChild(btn.dataset.child);
       const pm = pc && findMap(pc, btn.dataset.id);
       if (pm) {
-        printRoot.innerHTML = printHtml(pc, pm);
+        printRoot.innerHTML = printDoc(pc, pm);
         window.print();
       }
     }
@@ -1914,7 +2129,7 @@
       render();
     }
     if (action === "add-map") {
-      const map = emptyMap(btn.dataset.age);
+      const map = emptyMap(btn.dataset.age, btn.dataset.kind);
       ctx.child.maps.push(map);
       persist();
       location.hash = "#/c/" + ctx.child.id + "/m/" + map.id;
@@ -1945,7 +2160,7 @@
       persist("Черновик сохранён " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0"));
     }
     if (action === "print") {
-      if (ctx.child && ctx.map) printRoot.innerHTML = printHtml(ctx.child, ctx.map);
+      if (ctx.child && ctx.map) printRoot.innerHTML = printDoc(ctx.child, ctx.map);
       window.print();
     }
     if (action === "export") {
@@ -2070,7 +2285,7 @@
   });
   window.addEventListener("beforeprint", function () {
     const ctx = current();
-    if (ctx.child && ctx.map) printRoot.innerHTML = printHtml(ctx.child, ctx.map);
+    if (ctx.child && ctx.map) printRoot.innerHTML = printDoc(ctx.child, ctx.map);
   });
 
   render();
