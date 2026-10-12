@@ -459,6 +459,16 @@ table.data input.selected,
   background: #f7f1e7;
 }
 
+.vpf-opts {
+  display: flex;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.vpf-opts label {
+  cursor: pointer;
+}
+
 .tabs {
   display: flex;
   gap: 8px;
