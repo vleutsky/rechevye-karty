@@ -435,8 +435,8 @@
 
   function emptyMap(age, kind) {
     const map = { id: uid(), age: Number(age), date: today(), answers: {} };
-    if (kind === "vpf") {
-      map.type = "vpf";
+    if (kind === "vpf" || kind === "mrr") {
+      map.type = kind;
       return map;
     }
     map.scores = {
@@ -458,6 +458,9 @@
     if (map.type === "vpf") {
       const tpl = VPF[map.age];
       return tpl ? "Диагностическая карта ВПФ — " + tpl.group : "Диагностическая карта ВПФ";
+    }
+    if (map.type === "mrr") {
+      return "Мониторинг речевого развития — " + map.age + " класс";
     }
     return (AGES[map.age] || AGES[5]).title;
   }
@@ -763,6 +766,11 @@
       '<button class="btn" data-action="add-map" data-age="4" data-kind="vpf">4–5 лет</button>' +
       '<button class="btn" data-action="add-map" data-age="5" data-kind="vpf">5–6 лет</button>' +
       '<button class="btn" data-action="add-map" data-age="6" data-kind="vpf">6–7 лет</button></div>' +
+      "<h2>Мониторинг речевого развития (Розова и др., школа)</h2>" +
+      '<div class="toolbar"><button class="btn" data-action="add-map" data-age="1" data-kind="mrr">1 класс</button>' +
+      '<button class="btn" data-action="add-map" data-age="2" data-kind="mrr">2 класс</button>' +
+      '<button class="btn" data-action="add-map" data-age="3" data-kind="mrr">3 класс</button>' +
+      '<button class="btn" data-action="add-map" data-age="4" data-kind="mrr">4 класс</button></div>' +
       mapList +
       "</div></main>";
     printRoot.innerHTML = "";
@@ -1521,6 +1529,10 @@
       renderVpfEditor(child, map);
       return;
     }
+    if (map.type === "mrr") {
+      renderMrrEditor(child, map);
+      return;
+    }
     const tpl = AGES[map.age];
     const nav = SECTIONS.map(function (item) {
       return (
@@ -1840,8 +1852,218 @@
     return html;
   }
 
+  // ---- Мониторинг речевого развития (Розова Ю. Е. и др., школа) ----
+
+  function mrrSeriesSum(map, series) {
+    let total = 0;
+    let filled = 0;
+    let scoreable = 0;
+    series.probes.forEach(function (n) {
+      const qualitative = MRR_QUALITATIVE.indexOf(n) >= 0;
+      if (!qualitative) scoreable += 1;
+      const v = ans(map, "mpt:" + n);
+      if (v !== "") {
+        if (!qualitative) total += Number(v) || 0;
+        filled += 1;
+      }
+    });
+    return { total: total, filled: filled, max: scoreable * 2, count: series.probes.length };
+  }
+
+  function mrrTotals(map) {
+    let total = 0;
+    let filledGraded = 0;
+    MRR_SERIES.forEach(function (series) {
+      if (!series.graded) return;
+      const s = mrrSeriesSum(map, series);
+      total += s.total;
+      filledGraded += s.filled;
+    });
+    return { total: total, filledGraded: filledGraded, gradedCount: 20, max: 36 };
+  }
+
+  function mrrLevelText(t) {
+    if (t.filledGraded < t.gradedCount) return "";
+    let label = "";
+    MRR_LEVELS.forEach(function (lv) {
+      if (t.total >= lv.from) {
+        if (!label) label = lv.label;
+      }
+    });
+    return label || "IV уровень — критический (менее 7 баллов)";
+  }
+
+  function mrrPanel(child, map) {
+    let html =
+      "<h2 class='section-title'>Мониторинг речевого развития</h2>" +
+      "<p class='hint'>" +
+      esc(MRR_SOURCE) +
+      "</p><p class='hint'>" +
+      esc(MRR_SCORE_HINT) +
+      " Пробы 8 и 20 оцениваются качественно и в балльную оценку не входят: итог считается по пробам 1–7 и 9–19 (максимум 36). Серия 8 — диагностическая, в итог не входит." +
+      "</p><div class='fields two'>" +
+      field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
+      field("Дата рождения", "birthDate", {
+        scope: "child",
+        type: "date",
+        value: child.birthDate,
+        min: "1990-01-01",
+        max: today(),
+      }) +
+      field("Возраст", "ageCalc", { scope: "readonly", value: ageText(child.birthDate, map.date) }) +
+      field("Дата обследования", "date", { scope: "mapField", type: "date", value: map.date }) +
+      "</div>";
+    MRR_SERIES.forEach(function (series) {
+      const s = mrrSeriesSum(map, series);
+      html +=
+        "<h3>" +
+        esc(series.title) +
+        (series.graded
+          ? " <span class='muted'>сумма: " + s.total + " из " + s.max + "</span>"
+          : " <span class='muted'>заполнено: " + s.filled + " из " + series.probes.length + "</span>") +
+        "</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Проба</th><th>Балл</th></tr></thead><tbody>";
+      series.probes.forEach(function (n) {
+        const current = ans(map, "mpt:" + n);
+        const qualitative = MRR_QUALITATIVE.indexOf(n) >= 0;
+        const control = qualitative
+          ? "<input name='mpt:" +
+            n +
+            "' data-scope='map' value='" +
+            esc(current) +
+            "' placeholder='качественная оценка'>"
+          : [2, 1, 0]
+              .map(function (v) {
+                return (
+                  "<label><input type='radio' name='mpt:" +
+                  n +
+                  "' data-scope='map' value='" +
+                  v +
+                  "'" +
+                  (current === String(v) ? " checked" : "") +
+                  "> " +
+                  v +
+                  "</label>"
+                );
+              })
+              .join("");
+        html +=
+          "<tr><td>" +
+          n +
+          "</td><td>" +
+          esc(MRR_PROBES[n]) +
+          (qualitative ? " <span class='muted'>(качественно)</span>" : "") +
+          "</td><td class='vpf-opts'>" +
+          control +
+          "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+    });
+    const t = mrrTotals(map);
+    html +=
+      "<div class='notice'><b>Итого по сериям 1–7: " +
+      t.total +
+      " из " +
+      t.max +
+      "</b> (заполнено проб: " +
+      t.filledGraded +
+      " из " +
+      t.gradedCount +
+      "). Уровень: " +
+      (mrrLevelText(t) || "заполните все пробы серий 1–7") +
+      ".</div>" +
+      "<h3>Примечания и рекомендации</h3><div class='fields'>" +
+      field("Примечания", "mrr:notes", { value: ans(map, "mrr:notes"), type: "textarea" }) +
+      field("Рекомендации", "mrr:recs", { value: ans(map, "mrr:recs"), type: "textarea" }) +
+      "</div><div class='fields two'>" +
+      field("Проводил обследование", "mrr:examiner", { value: ans(map, "mrr:examiner") }) +
+      "</div>";
+    return html;
+  }
+
+  function renderMrrEditor(child, map) {
+    app.innerHTML =
+      topbar(
+        '<button class="btn" data-action="open-child" data-id="' +
+          child.id +
+          '">К ребёнку</button>' +
+          '<button class="btn btn-primary" data-action="save-draft">Сохранить черновик</button>' +
+          '<button class="btn btn-clay" data-action="print">Печать</button>'
+      ) +
+      '<main class="wrap"><div class="editor-head"><div><h2>' +
+      esc(child.fio || "Ребёнок") +
+      "</h2><p class='muted'>" +
+      esc(mapTitle(map)) +
+      " · " +
+      esc(ageText(child.birthDate, map.date) || "") +
+      '</p></div><div class="' + saveStateClass() + '" id="save-state">' + saveLabel() + '</div></div>' +
+      '<div class="panel" id="section-panel">' +
+      mrrPanel(child, map) +
+      "</div></main>";
+    printRoot.innerHTML = "";
+  }
+
+  function mrrPrintHtml(child, map) {
+    const t = mrrTotals(map);
+    let html =
+      '<article class="print-doc"><h1>Мониторинг речевого развития</h1>' +
+      '<p class="sub">' +
+      esc(map.age + " класс") +
+      "</p>" +
+      '<p class="src">' +
+      esc(MRR_SOURCE) +
+      "</p>" +
+      line("Фамилия, имя, отчество ребёнка", child.fio) +
+      '<div class="pair">' +
+      line("Дата рождения", fmtDate(child.birthDate)) +
+      line("Возраст", ageText(child.birthDate, map.date)) +
+      line("Дата обследования", fmtDate(map.date)) +
+      "</div>" +
+      "<h2>Пробы</h2><p>" +
+      esc(MRR_SCORE_HINT) +
+      " Пробы 8 и 20 оцениваются качественно и в балльную оценку не входят." +
+      "</p>";
+    MRR_SERIES.forEach(function (series) {
+      const s = mrrSeriesSum(map, series);
+      html += "<h3>" + esc(series.title) + "</h3>";
+      html += printTable(
+        ["№", "Проба", "Балл"],
+        series.probes.map(function (n) {
+          return [String(n), esc(MRR_PROBES[n]), esc(ans(map, "mpt:" + n))];
+        })
+      );
+      if (series.graded) html += "<p>Сумма серии: " + s.total + " из " + s.max + ".</p>";
+    });
+    html +=
+      "<h2>Итоги</h2>" +
+      printTable(
+        ["Серия", "Сумма", "Максимум"],
+        MRR_SERIES.filter(function (s) {
+          return s.graded;
+        }).map(function (series) {
+          const s = mrrSeriesSum(map, series);
+          return [esc(series.title), String(s.total), String(s.max)];
+        })
+      ) +
+      '<div class="pair">' +
+      line("Итого по сериям 1–7", t.filledGraded ? String(t.total) + " из 36" : "") +
+      line("Уровень речевого развития", mrrLevelText(t)) +
+      "</div>" +
+      "<h2>Примечания и рекомендации</h2>" +
+      line("Примечания", ans(map, "mrr:notes")) +
+      line("Рекомендации", ans(map, "mrr:recs")) +
+      '<div class="pair">' +
+      line("Дата", fmtDate(map.date)) +
+      line("Проводил обследование", ans(map, "mrr:examiner")) +
+      "</div></article>";
+    return html;
+  }
+
   function printDoc(child, map) {
-    return map.type === "vpf" ? vpfPrintHtml(child, map) : printHtml(child, map);
+    return map.type === "vpf"
+      ? vpfPrintHtml(child, map)
+      : map.type === "mrr"
+        ? mrrPrintHtml(child, map)
+        : printHtml(child, map);
   }
 
   function vpfPrintHtml(child, map) {
@@ -2015,6 +2237,13 @@
       scheduleSave();
       const panel = document.getElementById("section-panel");
       if (panel && map.type === "vpf") panel.innerHTML = vpfPanel(child, map);
+      return;
+    }
+    if (name.indexOf("mpt:") === 0) {
+      map.answers[name] = el.value;
+      scheduleSave();
+      const panel = document.getElementById("section-panel");
+      if (panel && map.type === "mrr") panel.innerHTML = mrrPanel(child, map);
       return;
     }
     map.answers[name] = el.value;
