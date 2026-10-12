@@ -476,9 +476,9 @@
   function topbar(extra) {
     return (
       '<header class="topbar">' +
-      '<div class="brand"><h1>' +
+      '<div class="brand"><div class="brand-mark">РК</div><div><h1>' +
       APP_TITLE +
-      "</h1><span>Крупенчук, 4 / 5 / 6 лет</span></div>" +
+      "</h1><span>Крупенчук · ВПФ · мониторинг речи</span></div></div>" +
       '<div class="top-actions">' +
       (extra || "") +
       fileButton() +
@@ -488,6 +488,45 @@
       "</div></header>" +
       fileNotice() +
       (fileState === "on" ? "" : backupNotice())
+    );
+  }
+
+  function initials(fio) {
+    const parts = String(fio || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+  }
+
+  function avatarClass(fio) {
+    let h = 0;
+    const s = String(fio || "ребёнок");
+    for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return "a" + ((h % 6) + 1);
+  }
+
+  function mapBadge(map) {
+    if (map.type === "vpf") return '<span class="badge b-vpf">ВПФ</span>';
+    if (map.type === "mrr") return '<span class="badge b-mrr">Мониторинг</span>';
+    return '<span class="badge b-speech">Речевая</span>';
+  }
+
+  function mapTileClass(map) {
+    return map.type === "vpf" ? "t-vpf" : map.type === "mrr" ? "t-mrr" : "t-speech";
+  }
+
+  function addTile(num, cap, age, kind) {
+    return (
+      '<button class="tile-btn' +
+      (kind === "vpf" ? " vpf" : kind === "mrr" ? " mrr" : "") +
+      '" data-action="add-map" data-age="' +
+      age +
+      '"' +
+      (kind ? ' data-kind="' + kind + '"' : "") +
+      '><span class="tile-num">' +
+      num +
+      "</span><span class='tile-cap'>" +
+      cap +
+      "</span></button>"
     );
   }
 
@@ -619,12 +658,16 @@
                 .map(function (map) {
                   const onDate = ageText(child.birthDate, map.date);
                   return (
-                    '<div class="map-item"><div><b>' +
+                    '<div class="map-tile ' +
+                    mapTileClass(map) +
+                    '"><div class="map-tile-main">' +
+                    mapBadge(map) +
+                    "<b>" +
                     esc(mapTitle(map)) +
-                    "</b><div class='muted'>дата обследования: " +
+                    "</b><span class='muted'>дата обследования: " +
                     esc(fmtDate(map.date) || "не указана") +
                     (onDate ? "; возраст на дату: " + esc(onDate) : "") +
-                    "</div></div><div class='toolbar'>" +
+                    "</span></div><div class='toolbar'>" +
                     '<button class="btn btn-primary" data-action="open-sheet" data-child="' + child.id + '" data-id="' + map.id + '">Открыть</button>' +
                     '<button class="btn btn-clay" data-action="print-map" data-child="' + child.id + '" data-id="' + map.id + '">Печать</button>' +
                     "</div></div>"
@@ -677,7 +720,11 @@
             const maps = child.maps || [];
             return (
               '<article class="card child-card">' +
-              "<div><h3>" +
+              '<div class="child-head"><div class="avatar ' +
+              avatarClass(child.fio) +
+              '">' +
+              esc(initials(child.fio)) +
+              "</div><div><h3>" +
               esc(child.fio || "Без имени") +
               "</h3><div class='meta'><span class='pill'>" +
               esc(ageText(child.birthDate) || "возраст не указан") +
@@ -685,7 +732,7 @@
               esc(child.group || "группа не указана") +
               "</span><span>карт: " +
               maps.length +
-              "</span></div></div>" +
+              "</span></div></div></div>" +
               '<div class="toolbar">' +
               '<button class="btn btn-primary" data-action="open-child" data-id="' +
               child.id +
@@ -720,11 +767,15 @@
         maps
           .map(function (map) {
             return (
-              '<div class="map-item"><div><b>' +
+              '<div class="map-tile ' +
+              mapTileClass(map) +
+              '"><div class="map-tile-main">' +
+              mapBadge(map) +
+              "<b>" +
               esc(mapTitle(map)) +
-              "</b><div class='muted'>дата обследования: " +
+              "</b><span class='muted'>дата обследования: " +
               esc(map.date || "не указана") +
-              "</div></div><div class='toolbar'><button class='btn btn-primary' data-action='open-map' data-id='" +
+              "</span></div><div class='toolbar'><button class='btn btn-primary' data-action='open-map' data-id='" +
               map.id +
               "'>Изменить</button><button class='btn btn-danger' data-action='delete-map' data-id='" +
               map.id +
@@ -758,19 +809,25 @@
       field("Домашний телефон", "phone", { scope: "child", value: child.phone }) +
       field("Мобильный (родителя)", "mobile", { scope: "child", value: child.mobile }) +
       "</div></div><div class='panel'><h2>Речевые карты</h2>" +
-      '<div class="toolbar"><button class="btn btn-primary" data-action="add-map" data-age="4">Карта 4 года</button>' +
-      '<button class="btn btn-primary" data-action="add-map" data-age="5">Карта 5 лет</button>' +
-      '<button class="btn btn-primary" data-action="add-map" data-age="6">Карта 6 лет</button></div>' +
+      '<div class="tile-row">' +
+      addTile("4", "года · речевая", 4) +
+      addTile("5", "лет · речевая", 5) +
+      addTile("6", "лет · речевая", 6) +
+      "</div>" +
       "<h2>Экспресс-диагностика ВПФ (Павлова, Руденко)</h2>" +
-      '<div class="toolbar"><button class="btn" data-action="add-map" data-age="3" data-kind="vpf">3–4 года</button>' +
-      '<button class="btn" data-action="add-map" data-age="4" data-kind="vpf">4–5 лет</button>' +
-      '<button class="btn" data-action="add-map" data-age="5" data-kind="vpf">5–6 лет</button>' +
-      '<button class="btn" data-action="add-map" data-age="6" data-kind="vpf">6–7 лет</button></div>' +
+      '<div class="tile-row">' +
+      addTile("3–4", "лет · ВПФ", 3, "vpf") +
+      addTile("4–5", "лет · ВПФ", 4, "vpf") +
+      addTile("5–6", "лет · ВПФ", 5, "vpf") +
+      addTile("6–7", "лет · ВПФ", 6, "vpf") +
+      "</div>" +
       "<h2>Мониторинг речевого развития (Розова и др., школа)</h2>" +
-      '<div class="toolbar"><button class="btn" data-action="add-map" data-age="1" data-kind="mrr">1 класс</button>' +
-      '<button class="btn" data-action="add-map" data-age="2" data-kind="mrr">2 класс</button>' +
-      '<button class="btn" data-action="add-map" data-age="3" data-kind="mrr">3 класс</button>' +
-      '<button class="btn" data-action="add-map" data-age="4" data-kind="mrr">4 класс</button></div>' +
+      '<div class="tile-row">' +
+      addTile("1", "класс", 1, "mrr") +
+      addTile("2", "класс", 2, "mrr") +
+      addTile("3", "класс", 3, "mrr") +
+      addTile("4", "класс", 4, "mrr") +
+      "</div>" +
       mapList +
       "</div></main>";
     printRoot.innerHTML = "";
