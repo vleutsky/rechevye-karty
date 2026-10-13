@@ -1482,7 +1482,9 @@
       esc(VPF_SOURCE) +
       "</p><p class='hint'>" +
       esc(VPF_SCORE_HINT) +
-      "</p><div class='fields two'>" +
+      "</p>" +
+      (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
+      "<div class='fields two'>" +
       field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
       field("Дата рождения", "birthDate", {
         scope: "child",
