@@ -1069,3 +1069,25 @@ table.data tr.part-row input {
   font-size: 14px;
   color: var(--ink);
 }
+
+/* Таблица субтестов ВПФ: фиксированные колонки, ответы шире субтеста */
+table.data.vpf-table {
+  table-layout: fixed;
+  min-width: 620px;
+}
+
+table.data.vpf-table th:nth-child(1),
+table.data.vpf-table tbody > tr:not(.part-row) > td:nth-child(1) {
+  width: 40px;
+}
+
+table.data.vpf-table th:nth-child(2),
+table.data.vpf-table tbody > tr:not(.part-row) > td:nth-child(2) {
+  width: 30%;
+}
+
+table.data.vpf-table th:nth-child(3),
+table.data.vpf-table tbody > tr:not(.part-row) > td:nth-child(3) {
+  width: 150px;
+}
+
