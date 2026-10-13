@@ -1508,20 +1508,43 @@
           }).join("") +
           "</div>"
         : "") +
-      "<h3>Субтесты</h3><div class='table-wrap'><table class='data vpf-table'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th><th>Примечание</th></tr></thead><tbody>";
+      "<h3>Субтесты</h3><div class='table-wrap'><table class='data vpf-table'><thead><tr><th>№</th><th>Субтест</th><th>Ответы</th><th>Балл</th><th>Примечание</th></tr></thead><tbody>";
     tpl.subtests.forEach(function (item, i) {
       const n = i + 1;
       const current = ans(map, "vpt:" + n);
+      const parts = item.parts || [];
+      const span = parts.length > 1 ? " rowspan='" + parts.length + "'" : "";
+      function slotCell(pi) {
+        return (
+          "<span class='slot-label'>" +
+          esc(parts[pi]) +
+          "</span><input name='vpp:" +
+          n +
+          ":" +
+          pi +
+          "' data-scope='map' value='" +
+          esc(ans(map, "vpp:" + n + ":" + pi)) +
+          "' placeholder='ответ ребёнка'>"
+        );
+      }
       html +=
-        "<tr><td>" +
+        "<tr><td" +
+        span +
+        ">" +
         n +
-        "</td><td>" +
+        "</td><td" +
+        span +
+        ">" +
         esc(item.name) +
         (item.fn ? " <span class='muted'>(" + esc(item.fn) + ")</span>" : "") +
+        "</td><td class='slot-cell'>" +
+        (parts.length ? slotCell(0) : "") +
         "</td>" +
         (item.noscore
-          ? "<td class='muted' title='Баллами не оценивается — в протоколе фиксируется номер ступеньки (методичка)'>—</td>"
-          : "<td><span class='vpf-opts'>" +
+          ? "<td" + span + " class='muted' title='Баллами не оценивается — в протоколе фиксируется номер ступеньки (методичка)'>—</td>"
+          : "<td" +
+            span +
+            "><span class='vpf-opts'>" +
             [2, 1, 0]
               .map(function (v) {
                 return (
@@ -1538,23 +1561,16 @@
               })
               .join("") +
             "</span></td>") +
-        "<td><input name='vpn:" +
+        "<td" +
+        span +
+        "><input name='vpn:" +
         n +
         "' data-scope='map' value='" +
         esc(ans(map, "vpn:" + n)) +
         "' placeholder='пометки, особенности'></td></tr>";
-      (item.parts || []).forEach(function (part, pi) {
-        html +=
-          "<tr class='part-row'><td></td><td>" +
-          esc(part) +
-          "</td><td colspan='2'><input name='vpp:" +
-          n +
-          ":" +
-          pi +
-          "' data-scope='map' value='" +
-          esc(ans(map, "vpp:" + n + ":" + pi)) +
-          "' placeholder='ответ ребёнка'></td></tr>";
-      });
+      for (let pi = 1; pi < parts.length; pi++) {
+        html += "<tr class='part-row'><td class='slot-cell'>" + slotCell(pi) + "</td></tr>";
+      }
     });
     const sum = vpfSum(map, tpl);
     const noscoreNote = tpl.subtests.some(function (s) { return s.noscore; })
