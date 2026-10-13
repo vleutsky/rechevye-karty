@@ -798,6 +798,22 @@ table.data input.selected,
   color: var(--pine-2);
 }
 
+.cloud-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(560px, 100%);
+}
+
+.cloud-form .fields.two {
+  grid-template-columns: 1.4fr 1fr;
+}
+
+.cloud-error {
+  color: var(--danger);
+  font-size: 13.5px;
+}
+
 .motor-bar {
   margin-bottom: 8px;
 }
