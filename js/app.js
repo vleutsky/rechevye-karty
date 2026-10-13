@@ -1484,6 +1484,11 @@
       esc(VPF_SCORE_HINT) +
       "</p>" +
       (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
+      (tpl.talk && tpl.talk.length
+        ? "<h3>Вопросы для беседы</h3><ol class='talk-list'>" +
+          tpl.talk.map(function (q) { return "<li>" + esc(q) + "</li>"; }).join("") +
+          "</ol>"
+        : "") +
       "<div class='fields two'>" +
       field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
       field("Дата рождения", "birthDate", {
@@ -1505,6 +1510,7 @@
         n +
         "</td><td>" +
         esc(item.name) +
+        (item.fn ? " <span class='muted'>(" + esc(item.fn) + ")</span>" : "") +
         "</td><td class='vpf-opts'>" +
         [2, 1, 0]
           .map(function (v) {
@@ -2129,9 +2135,6 @@
   function vpfPrintHtml(child, map) {
     const tpl = VPF[map.age];
     const sum = vpfSum(map, tpl);
-    const rows = tpl.subtests.map(function (item, i) {
-      return [String(i + 1), esc(item.name), esc(ans(map, "vpt:" + (i + 1)))];
-    });
     return (
       '<article class="print-doc"><h1>Диагностическая карта</h1>' +
       '<p class="sub">Экспресс-диагностика в детском саду (ВПФ) — ' +
@@ -2150,7 +2153,21 @@
       "<h2>Субтесты</h2><p>" +
       esc(VPF_SCORE_HINT) +
       "</p>" +
-      printTable(["№", "Субтест", "Балл"], rows) +
+      (tpl.talk && tpl.talk.length
+        ? "<h3>Вопросы для беседы</h3><ol>" +
+          tpl.talk.map(function (q) { return "<li>" + esc(q) + "</li>"; }).join("") +
+          "</ol>"
+        : "") +
+      printTable(
+        ["№", "Субтест", "Балл"],
+        tpl.subtests.map(function (item, i) {
+          return [
+            String(i + 1),
+            esc(item.name) + (item.fn ? " (" + esc(item.fn) + ")" : ""),
+            esc(ans(map, "vpt:" + (i + 1))),
+          ];
+        })
+      ) +
       '<div class="pair">' +
       line("Итого баллов", sum.filled ? sum.total + " из " + sum.max : "") +
       line("Уровень", vpfLevelText(sum, tpl)) +
