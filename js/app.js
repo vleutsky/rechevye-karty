@@ -1452,14 +1452,17 @@
   function vpfSum(map, tpl) {
     let total = 0;
     let filled = 0;
+    let scored = 0;
     tpl.subtests.forEach(function (item, i) {
+      if (item.noscore) return;
+      scored += 1;
       const v = ans(map, "vpt:" + (i + 1));
       if (v !== "") {
         total += Number(v) || 0;
         filled += 1;
       }
     });
-    return { total: total, filled: filled, max: tpl.subtests.length * (tpl.scale || 2) };
+    return { total: total, filled: filled, max: scored * (tpl.scale || 2), scored: scored };
   }
 
   function vpfLevelText(sum, tpl) {
@@ -1482,7 +1485,7 @@
       "<p class='hint'>" +
       esc(VPF_SOURCE) +
       "</p><p class='hint'>" +
-      "Порядок выставления баллов — по методичке (раздел «Выставление баллов»)." +
+      esc(VPF_SCORE_RULE) +
       "</p>" +
       (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
       "<div class='fields two'>" +
@@ -1515,23 +1518,27 @@
         "</td><td>" +
         esc(item.name) +
         (item.fn ? " <span class='muted'>(" + esc(item.fn) + ")</span>" : "") +
-        "</td><td><span class='vpf-opts'>" +
-        [2, 1, 0]
-          .map(function (v) {
-            return (
-              "<label><input type='radio' name='vpt:" +
-              n +
-              "' data-scope='map' value='" +
-              v +
-              "'" +
-              (current === String(v) ? " checked" : "") +
-              "> " +
-              v +
-              "</label>"
-            );
-          })
-          .join("") +
-        "</span></td><td><input name='vpn:" +
+        "</td>" +
+        (item.noscore
+          ? "<td class='muted' title='Баллами не оценивается — в протоколе фиксируется номер ступеньки (методичка)'>—</td>"
+          : "<td><span class='vpf-opts'>" +
+            [2, 1, 0]
+              .map(function (v) {
+                return (
+                  "<label><input type='radio' name='vpt:" +
+                  n +
+                  "' data-scope='map' value='" +
+                  v +
+                  "'" +
+                  (current === String(v) ? " checked" : "") +
+                  "> " +
+                  v +
+                  "</label>"
+                );
+              })
+              .join("") +
+            "</span></td>") +
+        "<td><input name='vpn:" +
         n +
         "' data-scope='map' value='" +
         esc(ans(map, "vpn:" + n)) +
@@ -1550,6 +1557,9 @@
       });
     });
     const sum = vpfSum(map, tpl);
+    const noscoreNote = tpl.subtests.some(function (s) { return s.noscore; })
+      ? " Субтест «Лесенка» (самооценка) баллами не оценивается: в протоколе фиксируется номер выбранной ступеньки; в сумму не входит."
+      : "";
     html +=
       "</tbody></table></div><div class='notice'><b>Итого: " +
       sum.total +
@@ -1558,10 +1568,12 @@
       "</b> (заполнено субтестов: " +
       sum.filled +
       " из " +
-      tpl.subtests.length +
+      sum.scored +
       "). Уровень: " +
       (vpfLevelText(sum, tpl) || "заполните баллы") +
-      ".</div>" +
+      "." +
+      noscoreNote +
+      "</div>" +
       "<h3>Беседа-знакомство</h3><div class='fields'>" +
       field("Как вступает в контакт (с кем охотнее, активность, инициатива, речевой негативизм)", "vpf:contact", {
         value: ans(map, "vpf:contact"),
@@ -2179,7 +2191,7 @@
           tpl.talk.map(function (q, i) { return line(q, ans(map, "vpf:talk:" + i)); }).join("")
         : "") +
       "<h2>Субтесты</h2><p>" +
-      "Порядок выставления баллов — по методичке (раздел «Выставление баллов»)." +
+      esc(VPF_SCORE_RULE) +
       "</p>" +
       printTable(
         ["№", "Субтест", "Балл", "Примечание"],
@@ -2199,7 +2211,7 @@
                   );
                 })
                 .join(""),
-            esc(ans(map, "vpt:" + (i + 1))),
+            item.noscore ? "—" : esc(ans(map, "vpt:" + (i + 1))),
             esc(ans(map, "vpn:" + (i + 1))),
           ];
         })
