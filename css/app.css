@@ -1070,24 +1070,40 @@ table.data tr.part-row input {
   color: var(--ink);
 }
 
-/* Таблица субтестов ВПФ: фиксированные колонки, ответы шире субтеста */
+/* Таблица субтестов ВПФ: блоки субтестов (rowspan), сплошная сетка, ответы шире субтеста */
 table.data.vpf-table {
   table-layout: fixed;
-  min-width: 620px;
+  min-width: 700px;
 }
 
-table.data.vpf-table th:nth-child(1),
-table.data.vpf-table tbody > tr:not(.part-row) > td:nth-child(1) {
+table.data.vpf-table th:nth-child(1) {
   width: 40px;
 }
 
-table.data.vpf-table th:nth-child(2),
-table.data.vpf-table tbody > tr:not(.part-row) > td:nth-child(2) {
-  width: 30%;
+table.data.vpf-table th:nth-child(2) {
+  width: 24%;
 }
 
-table.data.vpf-table th:nth-child(3),
-table.data.vpf-table tbody > tr:not(.part-row) > td:nth-child(3) {
-  width: 150px;
+table.data.vpf-table th:nth-child(3) {
+  width: 34%;
+}
+
+table.data.vpf-table th:nth-child(4) {
+  width: 132px;
+}
+
+table.data.vpf-table .slot-cell {
+  padding: 4px 10px;
+}
+
+table.data.vpf-table .slot-label {
+  display: block;
+  font-size: 12.5px;
+  margin: 3px 0 2px;
+}
+
+/* у ячейки слота в последней колонке блока своя правая граница — линия Балл/Примечание не должна рваться */
+table.data.vpf-table tr.part-row td:last-child {
+  border-right: 1px solid var(--line);
 }
 
