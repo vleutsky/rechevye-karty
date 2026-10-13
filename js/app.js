@@ -59,6 +59,7 @@
       saveFailed = true;
     }
     fileWrite();
+    Cloud.schedulePush();
     showSaveError();
     const el = document.getElementById("save-state");
     if (el) el.textContent = saveLabel(label);
@@ -481,12 +482,14 @@
       "</h1><span>Крупенчук · ВПФ · мониторинг речи</span></div></div>" +
       '<div class="top-actions">' +
       (extra || "") +
+      Cloud.button() +
       fileButton() +
       '<button class="btn" data-action="export">Копия</button>' +
       '<button class="btn" data-action="import">Загрузить копию</button>' +
       '<input class="hidden-file" id="import-file" type="file" accept="application/json">' +
       "</div></header>" +
       fileNotice() +
+      Cloud.notice() +
       (fileState === "on" ? "" : backupNotice())
     );
   }
@@ -2239,7 +2242,7 @@
       return;
     }
     const scope = el.getAttribute("data-scope");
-    if (scope === "readonly") return;
+    if (scope === "readonly" || scope === "cloud") return;
     if (scope === "child") {
       if (name === "birthDate" && el.value) {
         if (el.value < "1990-01-01" || el.value > today()) {
@@ -2385,6 +2388,10 @@
     const ctx = current();
 
     if (action === "home") location.hash = "#/";
+    if (action.indexOf("cloud") === 0) {
+      Cloud.handle(action, btn);
+      return;
+    }
     if (action === "maps") location.hash = "#/maps";
     if (action === "open-sheet") location.hash = "#/maps/" + btn.dataset.child + "/" + btn.dataset.id;
     if (action === "edit-sheet" && ctx.child && ctx.map) location.hash = "#/c/" + ctx.child.id + "/m/" + ctx.map.id;
@@ -2576,4 +2583,19 @@
 
   render();
   fileInit();
+  Cloud.init({
+    getDb: function () {
+      return db;
+    },
+    setDb: function (data) {
+      db = data;
+      db.children = db.children || [];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      } catch (err) {}
+      fileWrite();
+      render();
+    },
+    render: render,
+  });
 })();
