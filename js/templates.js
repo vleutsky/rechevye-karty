@@ -436,9 +436,7 @@ const VPF = {
   3: {
     group: "вторая младшая группа (3–4 года)",
     scale: 2,
-    highFrom: 11,
-    midFrom: 7,
-    levels: { high: "11–15", mid: "7–10", low: "0–6" },
+    // уровни — по бланку (строки не подтверждены; будут внесены текстом владельца)
     talk: VPF_TALK,
     subtests: VPF_STAIRCASE.slice(0, 6),
   },
@@ -453,19 +451,15 @@ const VPF = {
   },
   5: {
     group: "старшая группа (5–6 лет)",
-    scale: 3,
-    highFrom: 26,
-    midFrom: 17,
-    levels: { high: "26–36", mid: "17–25", low: "0–16" },
+    scale: 2,
+    // уровни — по бланку (строки не подтверждены; будут внесены текстом владельца)
     talk: VPF_TALK_OLD,
     subtests: VPF_STAIRCASE.slice(0, 12),
   },
   6: {
     group: "подготовительная группа (6–7 лет)",
-    scale: 3,
-    highFrom: 33,
-    midFrom: 21,
-    levels: { high: "33–45", mid: "21–32", low: "0–20" },
+    scale: 2,
+    // уровни — по бланку (строки не подтверждены; будут внесены текстом владельца)
     talk: VPF_TALK_OLD,
     subtests: VPF_STAIRCASE.slice(0, 15),
   },

@@ -1464,19 +1464,14 @@
 
   function vpfLevelText(sum, tpl) {
     if (!sum.filled) return "";
+    if (!tpl.levels || !tpl.highFrom) return "по бланку";
     const level = sum.total >= tpl.highFrom ? "высокий" : sum.total >= tpl.midFrom ? "средний" : "низкий";
     const range =
-      tpl.levels && level === "высокий"
+      level === "высокий"
         ? tpl.levels.high
-        : tpl.levels && level === "средний"
+        : level === "средний"
           ? tpl.levels.mid
-          : tpl.levels
-            ? tpl.levels.low
-            : level === "высокий"
-              ? tpl.highFrom + "–" + sum.max
-              : level === "средний"
-                ? tpl.midFrom + "–" + (tpl.highFrom - 1)
-                : "0–" + (tpl.midFrom - 1);
+          : tpl.levels.low;
     return level + " (" + range + " баллов)";
   }
 
