@@ -1520,6 +1520,9 @@
       const current = ans(map, "vpt:" + n);
       const parts = item.parts || [];
       const span = parts.length > 1 ? " rowspan='" + parts.length + "'" : "";
+      if (tpl.sections && tpl.sections[n]) {
+        html += "<tr class='vpf-section'><td colspan='5'>" + esc(tpl.sections[n]) + "</td></tr>";
+      }
       function slotCell(pi) {
         return (
           "<span class='slot-label'>" +
@@ -1577,6 +1580,7 @@
         (vpfCriterion(map, item, n)
           ? "<div class='crit-text'>" + esc(vpfCriterion(map, item, n)) + "</div>"
           : "") +
+        (item.note ? "<div class='crit-text'>" + esc(item.note) + "</div>" : "") +
         "</td></tr>";
       for (let pi = 1; pi < parts.length; pi++) {
         html += "<tr class='part-row'><td class='slot-cell'>" + slotCell(pi) + "</td></tr>";
@@ -1715,9 +1719,13 @@
     html += "</tr></thead><tbody>";
     rows.forEach(function (row) {
       html += "<tr>";
-      row.forEach(function (cell) {
-        html += "<td>" + (cell || "") + "</td>";
-      });
+      if (typeof row === "string") {
+        html += row;
+      } else {
+        row.forEach(function (cell) {
+          html += "<td>" + (cell || "") + "</td>";
+        });
+      }
       html += "</tr>";
     });
     return html + "</tbody></table>";
@@ -2219,11 +2227,15 @@
       "<h2>Субтесты</h2><p>" +
       esc(VPF_SCORE_RULE) +
       "</p>" +
-      printTable(
-        ["№", "Субтест", "Балл", "Примечание"],
-        tpl.subtests.map(function (item, i) {
-          return [
-            String(i + 1),
+      (function () {
+        const rows = [];
+        tpl.subtests.forEach(function (item, i) {
+          const n = i + 1;
+          if (tpl.sections && tpl.sections[n]) {
+            rows.push("<td colspan='4' class='psec'>" + esc(tpl.sections[n]) + "</td>");
+          }
+          rows.push([
+            String(n),
             esc(item.name) +
               (item.fn ? " (" + esc(item.fn) + ")" : "") +
               (item.parts || [])
@@ -2232,18 +2244,21 @@
                     "<div class='muted'>" +
                     esc(part) +
                     ": " +
-                    esc(ans(map, "vpp:" + (i + 1) + ":" + pi)) +
+                    esc(ans(map, "vpp:" + n + ":" + pi)) +
                     "</div>"
                   );
                 })
                 .join(""),
-            item.noscore ? "—" : esc(ans(map, "vpt:" + (i + 1))),
-            (vpfCriterion(map, item, i + 1)
-              ? "<div class='crit-line'>" + esc(vpfCriterion(map, item, i + 1)) + "</div>"
-              : "") + esc(ans(map, "vpn:" + (i + 1))),
-          ];
-        })
-      ) +
+            item.noscore ? "—" : esc(ans(map, "vpt:" + n)),
+            (vpfCriterion(map, item, n)
+              ? "<div class='crit-line'>" + esc(vpfCriterion(map, item, n)) + "</div>"
+              : "") +
+              (item.note ? "<div class='crit-line'>" + esc(item.note) + "</div>" : "") +
+              esc(ans(map, "vpn:" + n)),
+          ]);
+        });
+        return printTable(["№", "Субтест", "Балл", "Примечание"], rows);
+      })() +
       '<div class="pair">' +
       line("Итого баллов", sum.filled ? sum.total + " из " + sum.max : "") +
       line("Уровень", vpfLevelText(sum, tpl)) +
