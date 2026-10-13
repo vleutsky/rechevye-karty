@@ -2261,7 +2261,7 @@
       }
       child[name] = el.value;
       scheduleSave();
-      if (ctx.r.view === "child" && (name === "fio" || name === "birthDate")) {
+      if (ctx.r.view === "child" && name === "fio") {
         const caret = el.selectionStart;
         renderChild(child);
         const next = app.querySelector('[name="' + name + '"]');
@@ -2269,6 +2269,15 @@
           next.focus();
           if (typeof caret === "number" && next.setSelectionRange) next.setSelectionRange(caret, caret);
         }
+        return;
+      }
+      // Дата рождения: без перерисовки (она сбрасывает ввод даты с клавиатуры),
+      // поля возраста обновляем на месте.
+      if (name === "birthDate") {
+        const now = app.querySelector('[name="ageNow"]');
+        if (now) now.value = ageText(child.birthDate);
+        const calc = app.querySelector('[name="ageCalc"]');
+        if (calc) calc.value = ageText(child.birthDate, map ? map.date : "");
       }
       return;
     }
