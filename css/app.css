@@ -1057,3 +1057,15 @@ table.data input.selected,
 #print-root {
   display: none;
 }
+
+table.data tr.part-row td {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+table.data tr.part-row input {
+  font-size: 14px;
+  color: var(--ink);
+}
