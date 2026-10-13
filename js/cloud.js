@@ -68,6 +68,31 @@ var Cloud = (function () {
     if (hooks && hooks.render) hooks.render();
   }
 
+  // Обновить только кнопку «Облако» и открытую панель — не трогая поля ввода
+  // (полная перерисовка страницы сбрасывала ввод, пока идёт синхронизация).
+  function paintChrome() {
+    var b = document.querySelector("[data-action='cloud']");
+    if (b) {
+      var t1 = document.createElement("div");
+      t1.innerHTML = button();
+      if (t1.firstElementChild) b.replaceWith(t1.firstElementChild);
+    }
+    var p = document.querySelector(".cloud-panel");
+    if (p) {
+      var t2 = document.createElement("div");
+      t2.innerHTML = notice();
+      if (t2.firstElementChild) p.replaceWith(t2.firstElementChild);
+    }
+  }
+
+  // Сообщение на экране входа без перерисовки формы
+  function setGateStatus(text, isError) {
+    var el = document.querySelector(".gate-status");
+    if (!el) return;
+    el.className = "gate-status " + (isError ? "cloud-error" : "muted");
+    el.textContent = text || "";
+  }
+
   // ---- Кнопка в шапке ----
   function button() {
     if (!state.email) {
@@ -107,7 +132,7 @@ var Cloud = (function () {
     if (!state.panel) return "";
     if (!state.email) {
       return (
-        '<div class="backup-note file-note" role="status"><div class="cloud-form"><b>Кабинет</b>' +
+        '<div class="backup-note file-note cloud-panel" role="status"><div class="cloud-form"><b>Кабинет</b>' +
         "<span class='muted'>Почта и пароль — одна картотека на всех устройствах.</span>" +
         '<div class="fields two">' +
         field("Почта", "cloud-email", "email") +
@@ -123,7 +148,7 @@ var Cloud = (function () {
       );
     }
     return (
-      '<div class="backup-note file-note" role="status"><div class="cloud-form"><b>Кабинет: ' +
+      '<div class="backup-note file-note cloud-panel" role="status"><div class="cloud-form"><b>Кабинет: ' +
       esc(state.email) +
       "</b>" +
       "<span class='muted'>Синхронизировано: " +
@@ -152,11 +177,11 @@ var Cloud = (function () {
       '<button class="btn btn-primary" data-action="cloud-login">Войти</button>' +
       '<button class="btn" data-action="cloud-register">Создать кабинет</button>' +
       "</div>" +
-      (state.busy
-        ? "<div class='muted'>Проверяем…</div>"
-        : state.error
-          ? "<div class='cloud-error'>" + esc(state.error) + "</div>"
-          : "") +
+      "<div class='gate-status " +
+      (state.error ? "cloud-error" : "muted") +
+      "' aria-live='polite'>" +
+      esc(state.error || "") +
+      "</div>" +
       "<p class='hint'>Работа с картотекой — после входа. Данные синхронизируются между вашими устройствами.</p>" +
       "</div></div>"
     );
@@ -170,7 +195,7 @@ var Cloud = (function () {
 
   function pull() {
     state.status = "sync";
-    rerender();
+    paintChrome();
     return api({ action: "get", email: state.email, token: state.token })
       .then(function (res) {
         if (!res.ok) {
@@ -189,12 +214,12 @@ var Cloud = (function () {
         state.status = "ok";
         state.lastSync = Date.now();
         state.error = "";
-        rerender();
+        paintChrome();
       })
       .catch(function (err) {
         state.status = "err";
         state.error = "нет связи с сервером";
-        rerender();
+        paintChrome();
       });
   }
 
@@ -213,13 +238,13 @@ var Cloud = (function () {
         state.status = "ok";
         state.lastSync = Date.now();
         state.error = "";
-        rerender();
+        paintChrome();
       })
       .catch(function (err) {
         state.status = "err";
         state.error = "не сохранилось в облако";
         dirty = true;
-        rerender();
+        paintChrome();
       });
   }
 
@@ -282,12 +307,13 @@ var Cloud = (function () {
       var f = readForm();
       if (!f.email || !f.pass) {
         state.error = "Введите почту и пароль.";
-        rerender();
+        setGateStatus(state.error, true);
+        paintChrome();
         return;
       }
       state.busy = true;
       state.error = "";
-      rerender();
+      setGateStatus("Проверяем…");
       api({
         action: action === "cloud-login" ? "login" : "register",
         email: f.email,
@@ -306,7 +332,7 @@ var Cloud = (function () {
                     : res.error === "badlogin"
                       ? "Неверная почта или пароль."
                       : "Не получилось, попробуйте ещё раз.";
-            rerender();
+            setGateStatus(state.error, true);
             return;
           }
           state.email = res.email;
@@ -330,7 +356,7 @@ var Cloud = (function () {
         .catch(function () {
           state.busy = false;
           state.error = "Нет связи с сервером.";
-          rerender();
+          setGateStatus(state.error, true);
         });
       return;
     }
@@ -352,6 +378,8 @@ var Cloud = (function () {
     loadState();
     window.addEventListener("beforeunload", flushOnExit);
     if (state.token) {
+      // токен сохранён: показать приложение сразу, не дожидаясь ответа сервера
+      if (document.querySelector(".gate")) rerender();
       pull();
     }
   }

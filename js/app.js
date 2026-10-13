@@ -2599,7 +2599,6 @@
     if (ctx.child && ctx.map) printRoot.innerHTML = printDoc(ctx.child, ctx.map);
   });
 
-  render();
   fileInit();
   Cloud.init({
     getDb: function () {
@@ -2616,4 +2615,5 @@
     },
     render: render,
   });
+  render();
 })();
