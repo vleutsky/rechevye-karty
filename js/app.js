@@ -1505,7 +1505,7 @@
           }).join("") +
           "</div>"
         : "") +
-      "<h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th><th>Примечание</th></tr></thead><tbody>";
+      "<h3>Субтесты</h3><div class='table-wrap'><table class='data vpf-table'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th><th>Примечание</th></tr></thead><tbody>";
     tpl.subtests.forEach(function (item, i) {
       const n = i + 1;
       const current = ans(map, "vpt:" + n);
@@ -1540,13 +1540,13 @@
         html +=
           "<tr class='part-row'><td></td><td>" +
           esc(part) +
-          "</td><td><input name='vpp:" +
+          "</td><td colspan='2'><input name='vpp:" +
           n +
           ":" +
           pi +
           "' data-scope='map' value='" +
           esc(ans(map, "vpp:" + n + ":" + pi)) +
-          "' placeholder='ответ'></td><td></td></tr>";
+          "' placeholder='ответ ребёнка'></td></tr>";
       });
     });
     const sum = vpfSum(map, tpl);
