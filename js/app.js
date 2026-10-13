@@ -1532,6 +1532,18 @@
           })
           .join("") +
         "</td></tr>";
+      (item.parts || []).forEach(function (part, pi) {
+        html +=
+          "<tr class='part-row'><td></td><td>— " +
+          esc(part) +
+          "</td><td><input name='vpp:" +
+          n +
+          ":" +
+          pi +
+          "' data-scope='map' value='" +
+          esc(ans(map, "vpp:" + n + ":" + pi)) +
+          "' placeholder='ответ'></td></tr>";
+      });
     });
     const sum = vpfSum(map, tpl);
     html +=
@@ -2170,7 +2182,19 @@
         tpl.subtests.map(function (item, i) {
           return [
             String(i + 1),
-            esc(item.name) + (item.fn ? " (" + esc(item.fn) + ")" : ""),
+            esc(item.name) +
+              (item.fn ? " (" + esc(item.fn) + ")" : "") +
+              (item.parts || [])
+                .map(function (part, pi) {
+                  return (
+                    "<div class='muted'>— " +
+                    esc(part) +
+                    ": " +
+                    esc(ans(map, "vpp:" + (i + 1) + ":" + pi)) +
+                    "</div>"
+                  );
+                })
+                .join(""),
             esc(ans(map, "vpt:" + (i + 1))),
           ];
         })
