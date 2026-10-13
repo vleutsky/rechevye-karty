@@ -1490,13 +1490,6 @@
       "Порядок выставления баллов — по методичке (раздел «Выставление баллов»)." +
       "</p>" +
       (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
-      (tpl.talk && tpl.talk.length
-        ? "<h3>Вопросы для беседы</h3><div class='fields'>" +
-          tpl.talk.map(function (q, i) {
-            return field(q + " — ответ ребёнка", "vpf:talk:" + i, { value: ans(map, "vpf:talk:" + i) });
-          }).join("") +
-          "</div>"
-        : "") +
       "<div class='fields two'>" +
       field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
       field("Дата рождения", "birthDate", {
@@ -1509,7 +1502,15 @@
       field("Возраст", "ageCalc", { scope: "readonly", value: ageText(child.birthDate, map.date) }) +
       field("Дата обследования", "date", { scope: "mapField", type: "date", value: map.date }) +
       field("Группа", "group", { scope: "child", value: child.group }) +
-      "</div><h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th></tr></thead><tbody>";
+      "</div>" +
+      (tpl.talk && tpl.talk.length
+        ? "<h3>Вопросы для беседы</h3><div class='fields'>" +
+          tpl.talk.map(function (q, i) {
+            return field(q + " — ответ ребёнка", "vpf:talk:" + i, { value: ans(map, "vpf:talk:" + i) });
+          }).join("") +
+          "</div>"
+        : "") +
+      "<h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th></tr></thead><tbody>";
     tpl.subtests.forEach(function (item, i) {
       const n = i + 1;
       const current = ans(map, "vpt:" + n);
@@ -2158,13 +2159,13 @@
       line("Дата обследования", fmtDate(map.date)) +
       line("Группа", child.group) +
       "</div>" +
+      (tpl.talk && tpl.talk.length
+        ? "<h2>Вопросы для беседы</h2>" +
+          tpl.talk.map(function (q, i) { return line(q, ans(map, "vpf:talk:" + i)); }).join("")
+        : "") +
       "<h2>Субтесты</h2><p>" +
       "Порядок выставления баллов — по методичке (раздел «Выставление баллов»)." +
       "</p>" +
-      (tpl.talk && tpl.talk.length
-        ? "<h3>Вопросы для беседы</h3>" +
-          tpl.talk.map(function (q, i) { return line(q, ans(map, "vpf:talk:" + i)); }).join("")
-        : "") +
       printTable(
         ["№", "Субтест", "Балл"],
         tpl.subtests.map(function (item, i) {
