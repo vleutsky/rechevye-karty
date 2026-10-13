@@ -378,6 +378,18 @@ var Cloud = (function () {
     loadState();
     window.addEventListener("beforeunload", flushOnExit);
     if (state.token) {
+      // смена кабинета на этом устройстве (вход по сохранённому токену):
+      // локальная база прежнего кабинета не подмешивается
+      var prevEmail = "";
+      try {
+        prevEmail = localStorage.getItem(LAST_KEY) || "";
+      } catch (err) {}
+      if (prevEmail && prevEmail !== state.email && hooks.setDb) {
+        hooks.setDb({ children: [], savedAt: 0 });
+      }
+      try {
+        localStorage.setItem(LAST_KEY, state.email);
+      } catch (err) {}
       // токен сохранён: показать приложение сразу, не дожидаясь ответа сервера
       if (document.querySelector(".gate")) rerender();
       pull();
