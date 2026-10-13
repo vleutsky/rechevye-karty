@@ -4,7 +4,7 @@ var Cloud = (function () {
   var API = "https://logoklassiki.ru/api/";
   var KEY = "logoped-karty-cloud";
   var LAST_KEY = "logoped-karty-last-email";
-  var state = { email: "", token: "", status: "off", lastSync: 0, error: "", panel: false, busy: false };
+  var state = { email: "", name: "", token: "", status: "off", lastSync: 0, error: "", panel: false, busy: false };
   var pushTimer = null;
   var dirty = false;
   var hooks = null; // { getDb, setDb, render }
@@ -23,13 +23,14 @@ var Cloud = (function () {
       if (saved && saved.email && saved.token) {
         state.email = saved.email;
         state.token = saved.token;
+        state.name = saved.name || "";
       }
     } catch (err) {}
   }
 
   function saveState() {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ email: state.email, token: state.token }));
+      localStorage.setItem(KEY, JSON.stringify({ email: state.email, name: state.name, token: state.token }));
     } catch (err) {}
   }
 
@@ -93,23 +94,26 @@ var Cloud = (function () {
     el.textContent = text || "";
   }
 
-  // ---- Кнопка в шапке ----
+  // ---- Кнопка в шапке: кто вошёл + выход ----
   function button() {
     if (!state.email) {
-      return '<button class="btn" data-action="cloud">Облако</button>';
+      return '<button class="btn btn-primary" data-action="cloud">Войти в кабинет</button>';
     }
+    var who = state.name || state.email;
     var cls = state.status === "err" ? " btn-file is-warn" : " btn-file is-on";
-    var mark = state.status === "sync" ? "…" : state.status === "err" ? "!" : "";
+    var mark = state.status === "sync" ? " …" : state.status === "err" ? " !" : "";
     return (
       '<button class="btn' +
       cls +
       '" data-action="cloud" title="Кабинет: ' +
+      esc(state.name ? state.name + " · " : "") +
       esc(state.email) +
       ". Синхронизировано: " +
       (state.lastSync ? fmtTime(state.lastSync) : "ещё нет") +
-      '">Облако' +
-      (mark ? ": " + mark : "") +
-      "</button>"
+      '">👤 ' +
+      esc(who) +
+      mark +
+      '</button><button class="btn" data-action="cloud-logout" title="Выйти из кабинета">Выйти</button>'
     );
   }
 
@@ -148,17 +152,25 @@ var Cloud = (function () {
       );
     }
     return (
-      '<div class="backup-note file-note cloud-panel" role="status"><div class="cloud-form"><b>Кабинет: ' +
-      esc(state.email) +
-      "</b>" +
+      '<div class="backup-note file-note cloud-panel" role="status"><div class="cloud-form"><b>Кабинет</b>' +
+      '<div class="fields two">' +
+      field("Фамилия, имя", "cloud-name", "text", state.name) +
+      field("Почта", "cloud-email", "email", state.email) +
+      "</div>" +
+      '<div class="row">' +
+      '<button class="btn btn-primary" data-action="cloud-setname">Сохранить ФИО</button>' +
+      '<button class="btn" data-action="cloud-sync">Синхронизировать сейчас</button>' +
+      "</div>" +
       "<span class='muted'>Синхронизировано: " +
       (state.lastSync ? fmtTime(state.lastSync) : "ещё нет") +
       (state.error ? " · ошибка: " + esc(state.error) : "") +
       "</span>" +
-      '<div class="row">' +
-      '<button class="btn btn-primary" data-action="cloud-sync">Синхронизировать сейчас</button>' +
-      '<button class="btn btn-ghost" data-action="cloud-logout">Выйти</button>' +
-      "</div></div></div>"
+      (state.busy
+        ? "<div class='muted'>Проверяем…</div>"
+        : state.error && !state.lastSync
+          ? "<div class='cloud-error'>" + esc(state.error) + "</div>"
+          : "") +
+      "</div></div>"
     );
   }
 
@@ -170,6 +182,7 @@ var Cloud = (function () {
       "<div><h1>Речевые карты</h1>" +
       "<p class='muted'>Крупенчук · ВПФ · мониторинг речи</p></div>" +
       '<div class="gate-fields">' +
+      field("Фамилия, имя (при создании кабинета)", "cloud-name", "text") +
       field("Почта", "cloud-email", "email") +
       field("Пароль (не короче 6 знаков)", "cloud-pass", "password") +
       "</div>" +
@@ -274,19 +287,24 @@ var Cloud = (function () {
   function readForm() {
     var email = "";
     var pass = "";
+    var name = "";
     var e = document.querySelector("input[name='cloud-email']");
     var p = document.querySelector("input[name='cloud-pass']");
+    var n = document.querySelector("input[name='cloud-name']");
     if (e) email = e.value.trim();
     if (p) pass = p.value;
-    return { email: email, pass: pass };
+    if (n) name = n.value.trim();
+    return { email: email, pass: pass, name: name };
   }
 
   function logoutLocal(msg) {
     state.token = "";
     state.email = "";
+    state.name = "";
     state.status = "off";
     state.lastSync = 0;
     state.error = msg || "";
+    state.panel = false;
     saveState();
     rerender();
   }
@@ -318,6 +336,7 @@ var Cloud = (function () {
         action: action === "cloud-login" ? "login" : "register",
         email: f.email,
         password: f.pass,
+        name: f.name,
       })
         .then(function (res) {
           state.busy = false;
@@ -337,6 +356,7 @@ var Cloud = (function () {
           }
           state.email = res.email;
           state.token = res.token;
+          state.name = res.name || "";
           state.panel = false;
           state.error = "";
           saveState();
@@ -357,6 +377,28 @@ var Cloud = (function () {
           state.busy = false;
           state.error = "Нет связи с сервером.";
           setGateStatus(state.error, true);
+        });
+      return;
+    }
+    if (action === "cloud-setname") {
+      var n = document.querySelector("input[name='cloud-name']");
+      var newName = n ? n.value.trim() : "";
+      if (!newName) {
+        state.error = "Введите фамилию и имя.";
+        paintChrome();
+        return;
+      }
+      api({ action: "setname", email: state.email, token: state.token, name: newName })
+        .then(function (res) {
+          if (!res.ok) throw new Error(res.error);
+          state.name = res.name || newName;
+          saveState();
+          state.error = "";
+          paintChrome();
+        })
+        .catch(function () {
+          state.error = "Не удалось сохранить ФИО.";
+          paintChrome();
         });
       return;
     }

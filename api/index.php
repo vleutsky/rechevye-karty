@@ -19,6 +19,8 @@ $action = (string)(isset($in["action"]) ? $in["action"] : "");
 $email = strtolower(trim((string)(isset($in["email"]) ? $in["email"] : "")));
 $password = (string)(isset($in["password"]) ? $in["password"] : "");
 $token = (string)(isset($in["token"]) ? $in["token"] : "");
+$name = trim((string)(isset($in["name"]) ? $in["name"] : ""));
+if (mb_strlen($name) > 100) { $name = mb_substr($name, 0, 100); }
 
 function out($arr) { echo json_encode($arr, JSON_UNESCAPED_UNICODE); exit; }
 function loadJson($file, $fallback) {
@@ -62,11 +64,19 @@ if ($action === "register") {
   if (isset($accounts[$email])) { out(array("ok" => false, "error" => "exists")); }
   $accounts[$email] = array(
     "hash" => password_hash($password, PASSWORD_DEFAULT),
+    "name" => $name,
     "tokens" => array(),
     "created" => time(),
   );
   $t = issueToken();
-  out(array("ok" => true, "email" => $email, "token" => $t));
+  out(array("ok" => true, "email" => $email, "name" => $name, "token" => $t));
+}
+
+if ($action === "setname") {
+  if (!checkToken()) { out(array("ok" => false, "error" => "badtoken")); }
+  $accounts[$email]["name"] = $name;
+  saveJson($accountsFile, $accounts);
+  out(array("ok" => true, "name" => $name));
 }
 
 if ($action === "login") {
@@ -76,7 +86,7 @@ if ($action === "login") {
     out(array("ok" => false, "error" => "badlogin"));
   }
   $t = issueToken();
-  out(array("ok" => true, "email" => $email, "token" => $t));
+  out(array("ok" => true, "email" => $email, "name" => isset($a["name"]) ? $a["name"] : "", "token" => $t));
 }
 
 if ($action === "logout") {
@@ -90,7 +100,8 @@ if ($action === "logout") {
 
 if ($action === "whoami") {
   if (!checkToken()) { out(array("ok" => false, "error" => "badtoken")); }
-  out(array("ok" => true, "email" => $email));
+  $a = account();
+  out(array("ok" => true, "email" => $email, "name" => isset($a["name"]) ? $a["name"] : ""));
 }
 
 if ($action === "get") {
