@@ -1104,6 +1104,15 @@ table.data.vpf-table .crit-text {
   color: var(--teal);
 }
 
+/* строки-разделы бланка (1. Личностная сфера и т.п.) */
+table.data.vpf-table tr.vpf-section td {
+  background: #edf3f5;
+  font-weight: 650;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
 table.data.vpf-table .slot-label {
   display: block;
   font-size: 12.5px;

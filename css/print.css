@@ -111,3 +111,7 @@ table.print td {
   color: #444;
   margin-bottom: 3px;
 }
+
+.print-doc table.print td.psec {
+  font-weight: 600;
+}
