@@ -1505,7 +1505,7 @@
           }).join("") +
           "</div>"
         : "") +
-      "<h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th></tr></thead><tbody>";
+      "<h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th><th>Примечание</th></tr></thead><tbody>";
     tpl.subtests.forEach(function (item, i) {
       const n = i + 1;
       const current = ans(map, "vpt:" + n);
@@ -1531,10 +1531,14 @@
             );
           })
           .join("") +
-        "</td></tr>";
+        "</td><td><input name='vpn:" +
+        n +
+        "' data-scope='map' value='" +
+        esc(ans(map, "vpn:" + n)) +
+        "' placeholder='пометки, особенности'></td></tr>";
       (item.parts || []).forEach(function (part, pi) {
         html +=
-          "<tr class='part-row'><td></td><td>— " +
+          "<tr class='part-row'><td></td><td>" +
           esc(part) +
           "</td><td><input name='vpp:" +
           n +
@@ -1542,7 +1546,7 @@
           pi +
           "' data-scope='map' value='" +
           esc(ans(map, "vpp:" + n + ":" + pi)) +
-          "' placeholder='ответ'></td></tr>";
+          "' placeholder='ответ'></td><td></td></tr>";
       });
     });
     const sum = vpfSum(map, tpl);
@@ -2178,7 +2182,7 @@
       "Порядок выставления баллов — по методичке (раздел «Выставление баллов»)." +
       "</p>" +
       printTable(
-        ["№", "Субтест", "Балл"],
+        ["№", "Субтест", "Балл", "Примечание"],
         tpl.subtests.map(function (item, i) {
           return [
             String(i + 1),
@@ -2187,7 +2191,7 @@
               (item.parts || [])
                 .map(function (part, pi) {
                   return (
-                    "<div class='muted'>— " +
+                    "<div class='muted'>" +
                     esc(part) +
                     ": " +
                     esc(ans(map, "vpp:" + (i + 1) + ":" + pi)) +
@@ -2196,6 +2200,7 @@
                 })
                 .join(""),
             esc(ans(map, "vpt:" + (i + 1))),
+            esc(ans(map, "vpn:" + (i + 1))),
           ];
         })
       ) +
