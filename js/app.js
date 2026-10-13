@@ -1478,6 +1478,12 @@
     return level + " (" + range + " баллов)";
   }
 
+  // формулировка критерия по методичке для выставленного балла (vpc — сохранённая, иначе по текущему баллу)
+  function vpfCriterion(map, item, n) {
+    if (!item.criteria) return "";
+    return map.answers["vpc:" + n] || item.criteria[Number(map.answers["vpt:" + n] || "")] || "";
+  }
+
   function vpfPanel(child, map) {
     const tpl = VPF[map.age];
     let html =
@@ -1567,7 +1573,11 @@
         n +
         "' data-scope='map' value='" +
         esc(ans(map, "vpn:" + n)) +
-        "' placeholder='пометки, особенности'></td></tr>";
+        "' placeholder='пометки, особенности'>" +
+        (vpfCriterion(map, item, n)
+          ? "<div class='crit-text'>" + esc(vpfCriterion(map, item, n)) + "</div>"
+          : "") +
+        "</td></tr>";
       for (let pi = 1; pi < parts.length; pi++) {
         html += "<tr class='part-row'><td class='slot-cell'>" + slotCell(pi) + "</td></tr>";
       }
@@ -2228,7 +2238,9 @@
                 })
                 .join(""),
             item.noscore ? "—" : esc(ans(map, "vpt:" + (i + 1))),
-            esc(ans(map, "vpn:" + (i + 1))),
+            (vpfCriterion(map, item, i + 1)
+              ? "<div class='crit-line'>" + esc(vpfCriterion(map, item, i + 1)) + "</div>"
+              : "") + esc(ans(map, "vpn:" + (i + 1))),
           ];
         })
       ) +
@@ -2388,6 +2400,13 @@
     }
     if (name.indexOf("vpt:") === 0) {
       map.answers[name] = el.value;
+      const tpl = map.type === "vpf" ? VPF[map.age] : null;
+      const sub = tpl ? tpl.subtests[Number(name.split(":")[1]) - 1] : null;
+      if (sub && sub.criteria && sub.criteria[el.value]) {
+        map.answers["vpc:" + name.split(":")[1]] = sub.criteria[el.value];
+      } else {
+        delete map.answers["vpc:" + name.split(":")[1]];
+      }
       scheduleSave();
       const panel = document.getElementById("section-panel");
       if (panel && map.type === "vpf") panel.innerHTML = vpfPanel(child, map);
