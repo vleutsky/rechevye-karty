@@ -1515,7 +1515,7 @@
         "</td><td>" +
         esc(item.name) +
         (item.fn ? " <span class='muted'>(" + esc(item.fn) + ")</span>" : "") +
-        "</td><td class='vpf-opts'>" +
+        "</td><td><span class='vpf-opts'>" +
         [2, 1, 0]
           .map(function (v) {
             return (
@@ -1531,7 +1531,7 @@
             );
           })
           .join("") +
-        "</td><td><input name='vpn:" +
+        "</span></td><td><input name='vpn:" +
         n +
         "' data-scope='map' value='" +
         esc(ans(map, "vpn:" + n)) +
@@ -2040,9 +2040,9 @@
           "</td><td>" +
           esc(MRR_PROBES[n]) +
           (qualitative ? " <span class='muted'>(качественно)</span>" : "") +
-          "</td><td class='vpf-opts'>" +
+          "</td><td><span class='vpf-opts'>" +
           control +
-          "</td></tr>";
+          "</span></td></tr>";
       });
       html += "</tbody></table></div>";
     });
