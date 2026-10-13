@@ -1491,7 +1491,9 @@
       "</p>" +
       (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
       "<div class='fields two'>" +
-      field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
+      field("Дата", "date", { scope: "mapField", type: "date", value: map.date }) +
+      field("Группа", "group", { scope: "child", value: child.group }) +
+      field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio, span: true }) +
       field("Дата рождения", "birthDate", {
         scope: "child",
         type: "date",
@@ -1500,8 +1502,6 @@
         max: today(),
       }) +
       field("Возраст", "ageCalc", { scope: "readonly", value: ageText(child.birthDate, map.date) }) +
-      field("Дата обследования", "date", { scope: "mapField", type: "date", value: map.date }) +
-      field("Группа", "group", { scope: "child", value: child.group }) +
       "</div>" +
       (tpl.talk && tpl.talk.length
         ? "<h3>Вопросы для беседы</h3><div class='fields'>" +
@@ -1681,12 +1681,14 @@
       '<article class="print-doc"><h1>Речевая карта</h1><p class="sub">' +
       esc(tpl.title) +
       '</p><p class="src">по пособию: Крупенчук О. И. Речевая карта для обследования ребёнка дошкольного возраста. — СПб.: Литера, 2018</p>' +
+      '<div class="pair">' +
+      line("Дата", fmtDate(map.date)) +
+      line("Группа", child.group) +
+      "</div>" +
       line("Фамилия, имя, отчество ребёнка", child.fio) +
       '<div class="pair">' +
       line("Дата рождения", fmtDate(child.birthDate)) +
       line("Возраст", ageText(child.birthDate, map.date)) +
-      line("Дата обследования", fmtDate(map.date)) +
-      line("Группа", child.group) +
       "</div>" +
       line("Домашний адрес", child.address) +
       '<div class="pair">' +
@@ -2152,12 +2154,14 @@
       '<p class="src">' +
       esc(VPF_SOURCE) +
       "</p>" +
+      '<div class="pair">' +
+      line("Дата", fmtDate(map.date)) +
+      line("Группа", child.group) +
+      "</div>" +
       line("Фамилия, имя, отчество ребёнка", child.fio) +
       '<div class="pair">' +
       line("Дата рождения", fmtDate(child.birthDate)) +
       line("Возраст", ageText(child.birthDate, map.date)) +
-      line("Дата обследования", fmtDate(map.date)) +
-      line("Группа", child.group) +
       "</div>" +
       (tpl.talk && tpl.talk.length
         ? "<h2>Вопросы для беседы</h2>" +
