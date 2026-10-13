@@ -113,7 +113,7 @@ var Cloud = (function () {
       '">👤 ' +
       esc(who) +
       mark +
-      '</button><button class="btn" data-action="cloud-logout" title="Выйти из кабинета">Выйти</button>'
+      '</button><button class="btn" data-action="cloud-logout" title="Выйти из кабинета на этом устройстве (данные остаются в кабинете на сервере)">Выйти из кабинета</button>'
     );
   }
 
