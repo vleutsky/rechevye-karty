@@ -3,6 +3,7 @@
 var Cloud = (function () {
   var API = "https://logoklassiki.ru/api/";
   var KEY = "logoped-karty-cloud";
+  var LAST_KEY = "logoped-karty-last-email";
   var state = { email: "", token: "", status: "off", lastSync: 0, error: "", panel: false, busy: false };
   var pushTimer = null;
   var dirty = false;
@@ -133,6 +134,31 @@ var Cloud = (function () {
       '<button class="btn btn-primary" data-action="cloud-sync">Синхронизировать сейчас</button>' +
       '<button class="btn btn-ghost" data-action="cloud-logout">Выйти</button>' +
       "</div></div></div>"
+    );
+  }
+
+  // ---- Экран авторизации (весь сайт закрыт до входа) ----
+  function gate() {
+    return (
+      '<div class="gate-wrap"><div class="gate">' +
+      '<div class="brand-mark">РК</div>' +
+      "<div><h1>Речевые карты</h1>" +
+      "<p class='muted'>Крупенчук · ВПФ · мониторинг речи</p></div>" +
+      '<div class="gate-fields">' +
+      field("Почта", "cloud-email", "email") +
+      field("Пароль (не короче 6 знаков)", "cloud-pass", "password") +
+      "</div>" +
+      '<div class="row">' +
+      '<button class="btn btn-primary" data-action="cloud-login">Войти</button>' +
+      '<button class="btn" data-action="cloud-register">Создать кабинет</button>' +
+      "</div>" +
+      (state.busy
+        ? "<div class='muted'>Проверяем…</div>"
+        : state.error
+          ? "<div class='cloud-error'>" + esc(state.error) + "</div>"
+          : "") +
+      "<p class='hint'>Работа с картотекой — после входа. Данные синхронизируются между вашими устройствами.</p>" +
+      "</div></div>"
     );
   }
 
@@ -288,6 +314,17 @@ var Cloud = (function () {
           state.panel = false;
           state.error = "";
           saveState();
+          // другой кабинет на этом устройстве: локальная база не подмешивается
+          var prevEmail = "";
+          try {
+            prevEmail = localStorage.getItem(LAST_KEY) || "";
+          } catch (err) {}
+          try {
+            localStorage.setItem(LAST_KEY, res.email);
+          } catch (err) {}
+          if (prevEmail && prevEmail !== res.email && hooks && hooks.setDb) {
+            hooks.setDb({ children: [], savedAt: 0 });
+          }
           return sync();
         })
         .catch(function () {
@@ -323,8 +360,12 @@ var Cloud = (function () {
     init: init,
     button: button,
     notice: notice,
+    gate: gate,
     schedulePush: schedulePush,
     handle: handle,
+    authorized: function () {
+      return !!state.token;
+    },
     loggedIn: function () {
       return !!state.token;
     },

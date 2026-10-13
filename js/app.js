@@ -2185,7 +2185,16 @@
     return { r: r, child: child, map: map };
   }
 
+  function renderGate() {
+    app.innerHTML = Cloud.gate();
+    printRoot.innerHTML = "";
+  }
+
   function render() {
+    if (!Cloud.authorized()) {
+      renderGate();
+      return;
+    }
     const ctx = current();
     if (ctx.r.view === "map") {
       if (!ctx.child || !ctx.map) {
