@@ -1491,9 +1491,11 @@
       "</p>" +
       (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
       (tpl.talk && tpl.talk.length
-        ? "<h3>Вопросы для беседы</h3><ol class='talk-list'>" +
-          tpl.talk.map(function (q) { return "<li>" + esc(q) + "</li>"; }).join("") +
-          "</ol>"
+        ? "<h3>Вопросы для беседы</h3><div class='fields'>" +
+          tpl.talk.map(function (q, i) {
+            return field(q + " — ответ ребёнка", "vpf:talk:" + i, { value: ans(map, "vpf:talk:" + i) });
+          }).join("") +
+          "</div>"
         : "") +
       "<div class='fields two'>" +
       field("Фамилия, имя, отчество ребёнка", "fio", { scope: "child", value: child.fio }) +
@@ -2160,9 +2162,8 @@
       esc(tpl.scale === 3 ? "Каждый субтест оценивается от 0 до 3 баллов (по карте)." : VPF_SCORE_HINT) +
       "</p>" +
       (tpl.talk && tpl.talk.length
-        ? "<h3>Вопросы для беседы</h3><ol>" +
-          tpl.talk.map(function (q) { return "<li>" + esc(q) + "</li>"; }).join("") +
-          "</ol>"
+        ? "<h3>Вопросы для беседы</h3>" +
+          tpl.talk.map(function (q, i) { return line(q, ans(map, "vpf:talk:" + i)); }).join("")
         : "") +
       printTable(
         ["№", "Субтест", "Балл"],
