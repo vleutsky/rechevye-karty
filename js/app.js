@@ -1494,7 +1494,7 @@
       field("Возраст", "ageCalc", { scope: "readonly", value: ageText(child.birthDate, map.date) }) +
       field("Дата обследования", "date", { scope: "mapField", type: "date", value: map.date }) +
       field("Группа", "group", { scope: "child", value: child.group }) +
-      "</div><h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Оцениваемая функция</th><th>Балл</th></tr></thead><tbody>";
+      "</div><h3>Субтесты</h3><div class='table-wrap'><table class='data'><thead><tr><th>№</th><th>Субтест</th><th>Балл</th></tr></thead><tbody>";
     tpl.subtests.forEach(function (item, i) {
       const n = i + 1;
       const current = ans(map, "vpt:" + n);
@@ -1503,8 +1503,6 @@
         n +
         "</td><td>" +
         esc(item.name) +
-        "</td><td>" +
-        esc(item.fn) +
         "</td><td class='vpf-opts'>" +
         [2, 1, 0]
           .map(function (v) {
@@ -2130,12 +2128,7 @@
     const tpl = VPF[map.age];
     const sum = vpfSum(map, tpl);
     const rows = tpl.subtests.map(function (item, i) {
-      return [
-        String(i + 1),
-        esc(item.name),
-        esc(item.fn),
-        esc(ans(map, "vpt:" + (i + 1))),
-      ];
+      return [String(i + 1), esc(item.name), esc(ans(map, "vpt:" + (i + 1)))];
     });
     return (
       '<article class="print-doc"><h1>Диагностическая карта</h1>' +
@@ -2155,7 +2148,7 @@
       "<h2>Субтесты</h2><p>" +
       esc(VPF_SCORE_HINT) +
       "</p>" +
-      printTable(["№", "Субтест", "Оцениваемая функция", "Балл"], rows) +
+      printTable(["№", "Субтест", "Балл"], rows) +
       '<div class="pair">' +
       line("Итого баллов", sum.filled ? sum.total + " из " + sum.max : "") +
       line("Уровень", vpfLevelText(sum, tpl)) +
