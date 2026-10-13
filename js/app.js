@@ -1459,18 +1459,24 @@
         filled += 1;
       }
     });
-    return { total: total, filled: filled, max: tpl.subtests.length * 2 };
+    return { total: total, filled: filled, max: tpl.subtests.length * (tpl.scale || 2) };
   }
 
   function vpfLevelText(sum, tpl) {
     if (!sum.filled) return "";
     const level = sum.total >= tpl.highFrom ? "высокий" : sum.total >= tpl.midFrom ? "средний" : "низкий";
     const range =
-      level === "высокий"
-        ? tpl.highFrom + "–" + sum.max
-        : level === "средний"
-          ? tpl.midFrom + "–" + (tpl.highFrom - 1)
-          : "0–" + (tpl.midFrom - 1);
+      tpl.levels && level === "высокий"
+        ? tpl.levels.high
+        : tpl.levels && level === "средний"
+          ? tpl.levels.mid
+          : tpl.levels
+            ? tpl.levels.low
+            : level === "высокий"
+              ? tpl.highFrom + "–" + sum.max
+              : level === "средний"
+                ? tpl.midFrom + "–" + (tpl.highFrom - 1)
+                : "0–" + (tpl.midFrom - 1);
     return level + " (" + range + " баллов)";
   }
 
@@ -1481,7 +1487,7 @@
       "<p class='hint'>" +
       esc(VPF_SOURCE) +
       "</p><p class='hint'>" +
-      esc(VPF_SCORE_HINT) +
+      esc(tpl.scale === 3 ? "Каждый субтест оценивается от 0 до 3 баллов (по карте)." : VPF_SCORE_HINT) +
       "</p>" +
       (tpl.note ? "<p class='hint'><b>" + esc(tpl.note) + "</b></p>" : "") +
       (tpl.talk && tpl.talk.length
@@ -2151,7 +2157,7 @@
       line("Группа", child.group) +
       "</div>" +
       "<h2>Субтесты</h2><p>" +
-      esc(VPF_SCORE_HINT) +
+      esc(tpl.scale === 3 ? "Каждый субтест оценивается от 0 до 3 баллов (по карте)." : VPF_SCORE_HINT) +
       "</p>" +
       (tpl.talk && tpl.talk.length
         ? "<h3>Вопросы для беседы</h3><ol>" +
